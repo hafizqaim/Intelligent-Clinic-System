@@ -3,3 +3,8 @@ scikit-learn
 pandas
 numpy
 matplotlib
+pydantic-settings
+python-dotenv
+uvicorn[standard]
+sqlalchemy[asyncio]
+asyncpg
