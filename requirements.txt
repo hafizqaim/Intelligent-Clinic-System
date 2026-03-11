@@ -8,3 +8,4 @@ python-dotenv
 uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
+pgvector
