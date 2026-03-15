@@ -9,3 +9,10 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
 pgvector
+fastapi
+uvicorn[standard] 
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+pydantic
+pydantic-settings
