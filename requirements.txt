@@ -9,10 +9,10 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
 pgvector
-langchain
-langchain-community
-langchain-text-splitters
-pypdf
-langchain-huggingface
-sentence-transformers
-ollama
+fastapi
+uvicorn[standard] 
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+pydantic
+pydantic-settings
