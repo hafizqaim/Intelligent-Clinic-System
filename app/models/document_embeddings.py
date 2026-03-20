@@ -1,12 +1,11 @@
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import String, Integer
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped
+from app.database import Base
 from datetime import datetime
 import pgvector
 
-class Base(DeclarativeBase):
-    pass
 
 class DocumentEmbeddings(Base):
     __tablename__ = "document_embeddings"
