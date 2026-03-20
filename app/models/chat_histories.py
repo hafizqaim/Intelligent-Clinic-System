@@ -1,10 +1,9 @@
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import String, Integer
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped
+from app.database import Base
 
-class Base(DeclarativeBase):
-    pass
 
 class ChatHistories(Base):
     __tablename__ = "chat_histories"

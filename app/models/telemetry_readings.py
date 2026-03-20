@@ -1,13 +1,12 @@
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import String, Integer, Float, Boolean
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped
+from app.database import Base
 from datetime import datetime
 
 
 
-class Base(DeclarativeBase):
-    pass
 
 class TelemetryReadings(Base):
     __tablename__ = "telemetry_readings"

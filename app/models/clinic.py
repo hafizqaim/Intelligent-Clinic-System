@@ -2,10 +2,9 @@ from datetime import datetime
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import String, DateTime
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped
+from app.database import Base
 
-class Base(DeclarativeBase):
-    pass
 
 class Clinics(Base):
     __tablename__ = "clinics"

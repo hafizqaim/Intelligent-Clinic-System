@@ -2,10 +2,9 @@ import enum
 import uuid
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy import String, Boolean, Enum
-from sqlalchemy.orm import DeclarativeBase, mapped_column, Mapped
+from sqlalchemy.orm import mapped_column, Mapped
+from app.database import Base
 
-class Base(DeclarativeBase):
-    pass
 
 class Role(enum.Enum):
     admin = "admin"
