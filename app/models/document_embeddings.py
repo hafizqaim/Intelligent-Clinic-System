@@ -15,5 +15,5 @@ class DocumentEmbeddings(Base):
     source_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_text: Mapped[str] = mapped_column(String, nullable=False)
-    embedding: Mapped[pgvector.Vector] = mapped_column(pgvector.Vector, nullable=False)  
+    embedding: Mapped[pgvector.Vector] = mapped_column(pgvector.Vector(dim=384), nullable=False)  
     created_at: Mapped[datetime] = mapped_column(datetime, default=datetime.utcnow)
