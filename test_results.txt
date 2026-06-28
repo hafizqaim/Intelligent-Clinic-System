@@ -1,0 +1,31 @@
+
+=== 0. SEED BOOTSTRAP CLINIC ===
+  Seed: INSERT 0 1 
+
+=== 1. AUTH + CLINIC CRUD ===
+  >> POST http://localhost:8000/api/auth/register
+  [PASS] Register admin: 201 (expected 201)
+  >> POST http://localhost:8000/api/auth/login
+  [PASS] Login admin: 200 (expected 200)
+  >> POST http://localhost:8000/api/clinics/
+  [PASS] Create clinic: 201 (expected 201)
+         Clinic ID: 6e46d975-bbc5-4d08-bbfb-2859223a0702
+  >> GET http://localhost:8000/api/clinics/
+  [PASS] List clinics: 200 (expected 200)
+  >> GET http://localhost:8000/api/clinics/6e46d975-bbc5-4d08-bbfb-2859223a0702
+  [PASS] Get clinic by ID: 200 (expected 200)
+  >> PUT http://localhost:8000/api/clinics/6e46d975-bbc5-4d08-bbfb-2859223a0702
+  [PASS] Update clinic: 200 (expected 200)
+         Updated name: Updated Clinic Name
+
+=== 2. AUTH (Real DB) ===
+  >> POST http://localhost:8000/api/auth/register
+  [PASS] Register doctor: 201 (expected 201)
+  >> POST http://localhost:8000/api/auth/login
+  [PASS] Login doctor: 200 (expected 200)
+  >> GET http://localhost:8000/api/auth/me
+  [PASS] GET /me: 200 (expected 200)
+         email=doctor@testclinic.com
+  >> POST http://localhost:8000/api/auth/register
+  [PASS] Duplicate register (400): 400 (expected 400)
+  >> POST http://localhost:8000/api/auth/login

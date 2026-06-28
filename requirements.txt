@@ -9,3 +9,9 @@ uvicorn[standard]
 sqlalchemy[asyncio]
 asyncpg
 pgvector
+httpx
+python-multipart
+PyPDF2
+python-jose[cryptography]
+bcrypt
+structlog
