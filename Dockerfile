@@ -24,6 +24,8 @@ COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
 COPY ml_models/ ml_models/
+COPY start.sh .
+RUN chmod +x start.sh
 
 # Own files by the non-root user
 RUN chown -R clinic:clinic /app
@@ -33,6 +35,6 @@ USER clinic
 EXPOSE 8000
 
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
-    CMD python -c "import httpx; r = httpx.get('http://localhost:8000/health'); r.raise_for_status()"
+    CMD python -c "import os, httpx; p = os.environ.get('PORT', '8000'); r = httpx.get('http://localhost:' + p + '/health'); r.raise_for_status()"
 
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["./start.sh"]

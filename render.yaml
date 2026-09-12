@@ -8,7 +8,6 @@ services:
     name: intelligent-clinic-system-api
     runtime: docker
     dockerfilePath: ./Dockerfile
-    dockerCommand: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     plan: free
     healthCheckPath: /health
     envVars:
