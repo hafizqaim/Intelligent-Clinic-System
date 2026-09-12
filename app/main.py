@@ -3,6 +3,7 @@
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
@@ -78,9 +79,15 @@ def create_app() -> FastAPI:
     app.include_router(patients.router, prefix="/api/patients", tags=["patients"])
     app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
 
-    # ── Local test console (static SPA, same-origin so it can call the API directly) ──
+    # Old bookmarked /ui links keep working, redirected to the new home.
+    @app.get("/ui", include_in_schema=False)
+    @app.get("/ui/", include_in_schema=False)
+    async def redirect_old_ui_path():
+        return RedirectResponse(url="/")
+
+    # ── Web console (static SPA, same-origin so it can call the API directly) ──
     static_dir = os.path.join(os.path.dirname(__file__), "static")
-    app.mount("/ui", StaticFiles(directory=static_dir, html=True), name="ui")
+    app.mount("/", StaticFiles(directory=static_dir, html=True), name="ui")
 
     return app
 

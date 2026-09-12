@@ -40,11 +40,21 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 # ── Embedding (Gemini) ───────────────────────────────────────────────────────
 
 
-async def generate_embeddings(texts: list[str], api_key: str) -> list[list[float]]:
+async def generate_embeddings(
+    texts: list[str], api_key: str, task_type: str = "RETRIEVAL_DOCUMENT"
+) -> list[list[float]]:
     """Call Gemini's batch embeddings API for a list of texts in a single request."""
     model = settings.gemini_embedding_model
     requests_body = [
-        {"model": f"models/{model}", "content": {"parts": [{"text": t}]}} for t in texts
+        {
+            "model": f"models/{model}",
+            "content": {"parts": [{"text": t}]},
+            "embedContentConfig": {
+                "taskType": task_type,
+                "outputDimensionality": settings.embedding_dimensions,
+            },
+        }
+        for t in texts
     ]
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
@@ -109,7 +119,9 @@ async def retrieve_relevant_chunks(
     top_k: int = 5,
 ) -> list[dict]:
     """Return the top-K most similar chunks for the given query."""
-    query_emb = (await generate_embeddings([query], api_key))[0]
+    query_emb = (
+        await generate_embeddings([query], api_key, task_type="RETRIEVAL_QUERY")
+    )[0]
     emb_literal = "[" + ",".join(str(v) for v in query_emb) + "]"
 
     result = await db.execute(

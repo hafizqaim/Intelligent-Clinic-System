@@ -17,8 +17,8 @@ class Settings(BaseSettings):
 
     # RAG / LLM settings (Gemini)
     gemini_api_key: str = ""
-    gemini_embedding_model: str = "text-embedding-004"
-    gemini_chat_model: str = "gemini-2.0-flash"
+    gemini_embedding_model: str = "gemini-embedding-001"
+    gemini_chat_model: str = "gemini-2.5-flash"
     embedding_dimensions: int = 768
     chunk_size: int = 500
     chunk_overlap: int = 50
