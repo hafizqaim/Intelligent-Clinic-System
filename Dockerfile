@@ -24,6 +24,7 @@ COPY app/ app/
 COPY alembic/ alembic/
 COPY alembic.ini .
 COPY ml_models/ ml_models/
+COPY scripts/ scripts/
 COPY start.sh .
 RUN chmod +x start.sh
 
