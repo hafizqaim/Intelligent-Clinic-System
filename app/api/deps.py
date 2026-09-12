@@ -38,18 +38,15 @@ async def get_tenant_db(current_user: TokenData = Depends(get_current_user)):
         )
         yield session
     finally:
-        # set_config(..., false) is session-scoped, not transaction-scoped, and
-        # this connection returns to the pool for reuse by any other request
-        # (including ones that never set a tenant, e.g. login/register) -- clear
-        # it so nothing leaks. The RLS policy itself also guards against the
-        # empty-string state this (or a plain RESET) leaves a custom GUC in.
-        try:
-            await session.execute(
-                text("SELECT set_config('app.current_tenant', '', false)")
-            )
-            await session.commit()
-        except Exception:
-            pass
+        # Not resetting app.current_tenant here on purpose: set_config(..., false)
+        # is session-scoped, so this connection can return to the pool still
+        # carrying it and be reused by an unrelated request (e.g. a plain
+        # login/register session). That's handled where it actually matters --
+        # the RLS policy itself guards against a stale/empty value via NULLIF
+        # (see the guard_rls_policy_cast migration) -- rather than here, since
+        # any extra query in this teardown runs after the response is already
+        # computed, and an error here would incorrectly turn an already-
+        # successful request into a 500.
         await session.close()
 
 
