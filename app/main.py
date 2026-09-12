@@ -2,6 +2,7 @@
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
 from sqlalchemy import text
 
 from app.api.routers import auth, telemetry, clinics, patients, rag
@@ -60,16 +61,10 @@ def create_app() -> FastAPI:
         # ML model
         checks["ml_model"] = "ok" if detector.model is not None else "not loaded"
 
-        # Ollama
-        try:
-            import httpx
-            from app.core.config import settings
-
-            async with httpx.AsyncClient(timeout=3) as client:
-                r = await client.get(f"{settings.ollama_base_url}/api/tags")
-                checks["ollama"] = "ok" if r.status_code == 200 else f"status {r.status_code}"
-        except Exception:
-            checks["ollama"] = "unreachable"
+        # LLM (Gemini) — checked for configuration only, not a live call, since
+        # this endpoint is polled frequently and a live call would burn quota.
+        from app.core.config import settings
+        checks["llm"] = "ok" if settings.gemini_api_key else "not configured"
 
         overall = "ok" if all(v == "ok" for v in checks.values()) else "degraded"
         return {"status": overall, **checks}
@@ -80,6 +75,10 @@ def create_app() -> FastAPI:
     app.include_router(clinics.router, prefix="/api/clinics", tags=["clinics"])
     app.include_router(patients.router, prefix="/api/patients", tags=["patients"])
     app.include_router(rag.router, prefix="/api/rag", tags=["rag"])
+
+    # ── Local test console (static SPA, same-origin so it can call the API directly) ──
+    static_dir = os.path.join(os.path.dirname(__file__), "static")
+    app.mount("/ui", StaticFiles(directory=static_dir, html=True), name="ui")
 
     return app
 

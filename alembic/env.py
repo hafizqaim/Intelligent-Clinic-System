@@ -25,7 +25,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from app.database import Base
 from app.models import *
-from app.config import settings
+from app.core.config import settings
 target_metadata = Base.metadata
 
 config.set_main_option('sqlalchemy.url', settings.database_url.replace('postgresql://', 'postgresql+asyncpg://'))

@@ -60,7 +60,7 @@ def main():
         data = r.json()
         print(f"         database : {data.get('database')}")
         print(f"         ml_model : {data.get('ml_model')}")
-        print(f"         ollama   : {data.get('ollama')}")
+        print(f"         llm      : {data.get('llm')}")
 
     # ── 2. Seed a clinic (direct DB — bootstrap for auth) ──────
     step("2. Seed Clinic (bootstrap)")

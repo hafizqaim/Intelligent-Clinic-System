@@ -9,7 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.config import settings
 
-OLLAMA_BASE = settings.ollama_base_url
+GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 
 # ── Text chunking ────────────────────────────────────────────────────────────
@@ -36,21 +36,24 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     return "\n".join(pages)
 
 
-# ── Embedding (Ollama) ───────────────────────────────────────────────────────
+# ── Embedding (Gemini) ───────────────────────────────────────────────────────
 
 async def generate_embeddings(texts: list[str]) -> list[list[float]]:
-    """Call Ollama embeddings API for a list of texts."""
-    embeddings = []
-    async with httpx.AsyncClient(timeout=120.0) as client:
-        for t in texts:
-            resp = await client.post(
-                f"{OLLAMA_BASE}/api/embed",
-                json={"model": settings.ollama_embedding_model, "input": t},
-            )
-            resp.raise_for_status()
-            data = resp.json()
-            embeddings.append(data["embeddings"][0])
-    return embeddings
+    """Call Gemini's batch embeddings API for a list of texts in a single request."""
+    model = settings.gemini_embedding_model
+    requests_body = [
+        {"model": f"models/{model}", "content": {"parts": [{"text": t}]}}
+        for t in texts
+    ]
+    async with httpx.AsyncClient(timeout=60.0) as client:
+        resp = await client.post(
+            f"{GEMINI_BASE}/models/{model}:batchEmbedContents",
+            params={"key": settings.gemini_api_key},
+            json={"requests": requests_body},
+        )
+        resp.raise_for_status()
+        data = resp.json()
+    return [e["values"] for e in data["embeddings"]]
 
 
 # ── Document ingestion ───────────────────────────────────────────────────────
@@ -129,10 +132,10 @@ async def retrieve_relevant_chunks(
     ]
 
 
-# ── LLM answer generation ───────────────────────────────────────────────────
+# ── LLM answer generation (Gemini) ──────────────────────────────────────────
 
 async def generate_answer(query: str, context_chunks: list[dict]) -> str:
-    """Build a prompt from retrieved chunks and call Ollama chat model."""
+    """Build a prompt from retrieved chunks and call the Gemini chat model."""
     if not context_chunks:
         return "No relevant documents found. Please upload documents first."
 
@@ -141,31 +144,28 @@ async def generate_answer(query: str, context_chunks: list[dict]) -> str:
         for c in context_chunks
     )
 
-    async with httpx.AsyncClient(timeout=120.0) as client:
+    async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
-            f"{OLLAMA_BASE}/api/chat",
+            f"{GEMINI_BASE}/models/{settings.gemini_chat_model}:generateContent",
+            params={"key": settings.gemini_api_key},
             json={
-                "model": settings.ollama_chat_model,
-                "stream": False,
-                "messages": [
-                    {
-                        "role": "system",
-                        "content": (
+                "systemInstruction": {
+                    "parts": [{
+                        "text": (
                             "You are a helpful medical assistant for an intelligent clinic system. "
                             "Answer the user's question using ONLY the provided document context. "
                             "If the context does not contain enough information, say so clearly."
                         ),
-                    },
-                    {
-                        "role": "user",
-                        "content": f"Context:\n{context}\n\nQuestion: {query}",
-                    },
+                    }],
+                },
+                "contents": [
+                    {"role": "user", "parts": [{"text": f"Context:\n{context}\n\nQuestion: {query}"}]},
                 ],
             },
         )
         resp.raise_for_status()
         data = resp.json()
-    return data["message"]["content"]
+    return data["candidates"][0]["content"]["parts"][0]["text"]
 
 
 # ── Chat history ─────────────────────────────────────────────────────────────

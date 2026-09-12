@@ -23,9 +23,15 @@ from app.services.rag_service import (
 
 router = APIRouter()
 
-def _check_ollama_error(e: Exception):
+def _check_llm_error(e: Exception):
     if isinstance(e, httpx.ConnectError):
-        raise HTTPException(status_code=503, detail="Cannot connect to Ollama. Make sure it is running (ollama serve).")
+        raise HTTPException(status_code=503, detail="Cannot reach the Gemini API. Check your network connection.")
+    if isinstance(e, httpx.HTTPStatusError):
+        if e.response.status_code in (401, 403):
+            raise HTTPException(status_code=502, detail="Gemini API rejected the request — check GEMINI_API_KEY.")
+        if e.response.status_code == 429:
+            raise HTTPException(status_code=429, detail="Gemini API rate limit or quota exceeded. Try again shortly.")
+        raise HTTPException(status_code=502, detail=f"Gemini API error: {e.response.status_code}")
     raise
 
 
@@ -57,7 +63,7 @@ async def upload_document(
     try:
         total_chunks = await ingest_document(db, current_user.clinic_id, file.filename, content)
     except Exception as e:
-        _check_ollama_error(e)
+        _check_llm_error(e)
 
     return DocumentUploadResponse(
         filename=file.filename,
@@ -80,7 +86,7 @@ async def query_documents(
 
         answer = await generate_answer(body.query, chunks)
     except Exception as e:
-        _check_ollama_error(e)
+        _check_llm_error(e)
 
     sources = list({c["source_filename"] for c in chunks})
 

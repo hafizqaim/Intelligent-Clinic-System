@@ -1,0 +1,991 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clinic Ops Console</title>
+<style>
+  :root{
+    --bg:#F2F5F5; --surface:#FFFFFF; --surface-alt:#FAFBFB; --border:#E1E7E7; --border-strong:#C9D2D1;
+    --ink:#101817; --ink-muted:#5E6E6C; --ink-faint:#93A19F;
+    --accent:#0E7C86; --accent-strong:#075A66; --accent-soft:#E1F1F2; --accent-contrast:#FFFFFF;
+    --good:#187A54; --good-soft:#DEF3E9;
+    --warn:#A8600F; --warn-soft:#F6E6D2;
+    --bad:#B02A22; --bad-soft:#FBE1DF;
+    --shadow-sm:0 1px 2px rgba(16,24,23,.06);
+    --shadow-md:0 8px 24px rgba(16,24,23,.08), 0 2px 6px rgba(16,24,23,.05);
+    --shadow-lg:0 24px 48px rgba(16,24,23,.20), 0 6px 16px rgba(16,24,23,.10);
+
+    --font-sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;
+    --font-mono:ui-monospace,'SF Mono','Cascadia Code',Consolas,'Liberation Mono',monospace;
+    --r-sm:6px; --r-md:10px; --r-lg:14px;
+    --sp-1:.25rem; --sp-2:.5rem; --sp-3:.75rem; --sp-4:1rem; --sp-5:1.5rem; --sp-6:2rem; --sp-7:3rem;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0A0F0F; --surface:#121A19; --surface-alt:#17201F; --border:#243030; --border-strong:#324241;
+      --ink:#E8EEEC; --ink-muted:#8FA29F; --ink-faint:#546260;
+      --accent:#3FC0CC; --accent-strong:#7BD9E3; --accent-soft:#16302F; --accent-contrast:#062120;
+      --good:#4FBE8A; --good-soft:#12281F;
+      --warn:#E0A458; --warn-soft:#2C2213;
+      --bad:#E5867F; --bad-soft:#301917;
+      --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+      --shadow-md:0 8px 24px rgba(0,0,0,.45);
+      --shadow-lg:0 24px 56px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0A0F0F; --surface:#121A19; --surface-alt:#17201F; --border:#243030; --border-strong:#324241;
+    --ink:#E8EEEC; --ink-muted:#8FA29F; --ink-faint:#546260;
+    --accent:#3FC0CC; --accent-strong:#7BD9E3; --accent-soft:#16302F; --accent-contrast:#062120;
+    --good:#4FBE8A; --good-soft:#12281F;
+    --warn:#E0A458; --warn-soft:#2C2213;
+    --bad:#E5867F; --bad-soft:#301917;
+    --shadow-sm:0 1px 2px rgba(0,0,0,.4);
+    --shadow-md:0 8px 24px rgba(0,0,0,.45);
+    --shadow-lg:0 24px 56px rgba(0,0,0,.6);
+  }
+
+  *{ box-sizing:border-box; }
+  [hidden]{ display:none !important; }
+  html,body{ height:100%; }
+  body{
+    margin:0; background:var(--bg); color:var(--ink); font-family:var(--font-sans);
+    font-size:14px; line-height:1.5; -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+  ::selection{ background:var(--accent-soft); }
+  button, input, select, textarea{ font-family:inherit; font-size:inherit; color:inherit; }
+  :focus-visible{ outline:2px solid var(--accent); outline-offset:2px; }
+  a{ color:var(--accent); }
+  svg{ display:block; }
+  .icon{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.7; stroke-linecap:round; stroke-linejoin:round; flex:0 0 auto; }
+
+  /* ══════════════════════════ AUTH SCREEN ══════════════════════════ */
+  .auth-screen{
+    min-height:100vh; display:grid; grid-template-columns:1.1fr 1fr;
+  }
+  @media (max-width:860px){ .auth-screen{ grid-template-columns:1fr; } .auth-brand{ display:none; } }
+  .auth-brand{
+    background:linear-gradient(155deg, var(--accent-strong), var(--accent));
+    color:#fff; padding:var(--sp-7); display:flex; flex-direction:column; justify-content:space-between;
+    position:relative; overflow:hidden;
+  }
+  .auth-brand-wave{ position:absolute; inset:auto -10% -30% -10%; opacity:.25; }
+  .auth-brand-top{ display:flex; align-items:center; gap:.6rem; font-weight:700; font-size:1.05rem; position:relative; z-index:1; }
+  .auth-brand-mark{ width:34px; height:34px; border-radius:9px; background:rgba(255,255,255,.16); display:flex; align-items:center; justify-content:center; }
+  .auth-brand-body{ position:relative; z-index:1; max-width:30ch; }
+  .auth-brand-body h1{ font-size:1.75rem; line-height:1.25; margin:0 0 .75rem; letter-spacing:-.01em; text-wrap:balance; }
+  .auth-brand-body p{ margin:0; opacity:.85; font-size:.9375rem; }
+  .auth-brand-foot{ position:relative; z-index:1; font-size:.75rem; opacity:.7; font-family:var(--font-mono); }
+
+  .auth-form-side{ display:flex; align-items:center; justify-content:center; padding:var(--sp-6); }
+  .auth-card{ width:100%; max-width:380px; display:flex; flex-direction:column; gap:var(--sp-5); }
+  .auth-tabs{ display:flex; gap:var(--sp-1); background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--r-md); padding:3px; }
+  .auth-tab{ flex:1; text-align:center; padding:.5rem; border-radius:calc(var(--r-md) - 3px); background:none; border:none; cursor:pointer; color:var(--ink-muted); font-weight:600; font-size:.8125rem; }
+  .auth-tab.is-active{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-sm); }
+  .auth-panel h2{ margin:0 0 .2rem; font-size:1.25rem; letter-spacing:-.01em; }
+  .auth-panel p.sub{ margin:0 0 var(--sp-4); color:var(--ink-muted); font-size:.8125rem; }
+
+  /* ══════════════════════════ SHELL ══════════════════════════ */
+  .shell{ display:grid; grid-template-columns:248px 1fr; min-height:100vh; }
+  @media (max-width:900px){ .shell{ grid-template-columns:0 1fr; } .sidebar{ position:fixed; left:0; top:0; bottom:0; width:248px; z-index:40; transform:translateX(-100%); } .shell.nav-open .sidebar{ transform:translateX(0); } .shell.nav-open .nav-scrim{ display:block; } }
+  .nav-scrim{ display:none; position:fixed; inset:0; background:rgba(0,0,0,.35); z-index:35; }
+
+  .sidebar{ background:var(--surface); border-right:1px solid var(--border); display:flex; flex-direction:column; transition:transform .2s ease; }
+  .side-brand{ display:flex; align-items:center; gap:.6rem; padding:var(--sp-5) var(--sp-4) var(--sp-4); font-weight:700; }
+  .side-brand-mark{ width:30px; height:30px; border-radius:8px; background:var(--accent); color:#fff; display:flex; align-items:center; justify-content:center; flex:0 0 auto; }
+  .side-nav{ flex:1; overflow-y:auto; padding:0 var(--sp-3); display:flex; flex-direction:column; gap:var(--sp-4); }
+  .nav-group-label{ font-size:.6875rem; text-transform:uppercase; letter-spacing:.06em; color:var(--ink-faint); padding:.4rem .6rem 0; }
+  .nav-group{ display:flex; flex-direction:column; gap:1px; }
+  .nav-btn{
+    display:flex; align-items:center; gap:.65rem; text-align:left; background:none; border:none;
+    padding:.55rem .6rem; border-radius:var(--r-sm); color:var(--ink-muted); cursor:pointer; font-size:.8438rem; font-weight:500;
+  }
+  .nav-btn:hover{ background:var(--surface-alt); color:var(--ink); }
+  .nav-btn.is-active{ background:var(--accent-soft); color:var(--accent-strong); font-weight:700; }
+  .side-foot{ border-top:1px solid var(--border); padding:var(--sp-3); display:flex; align-items:center; gap:.6rem; }
+  .avatar{
+    width:32px; height:32px; border-radius:50%; background:var(--accent-soft); color:var(--accent-strong);
+    display:flex; align-items:center; justify-content:center; font-weight:700; font-size:.75rem; flex:0 0 auto;
+  }
+  .side-foot-info{ flex:1; min-width:0; }
+  .side-foot-name{ font-size:.8125rem; font-weight:600; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .side-foot-role{ font-size:.6875rem; color:var(--ink-muted); text-transform:capitalize; }
+
+  .topbar{ height:60px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:var(--sp-3); padding:0 var(--sp-5); background:var(--surface); position:sticky; top:0; z-index:10; }
+  .topbar-title{ font-weight:700; font-size:1rem; }
+  .topbar-sub{ font-size:.75rem; color:var(--ink-muted); }
+  .topbar-spacer{ flex:1; }
+  .icon-btn{ background:none; border:1px solid var(--border); border-radius:var(--r-sm); width:34px; height:34px; cursor:pointer; color:var(--ink-muted); display:flex; align-items:center; justify-content:center; position:relative; }
+  .icon-btn:hover{ color:var(--ink); border-color:var(--border-strong); }
+  .health-pop{ position:absolute; top:44px; right:0; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow-md); padding:var(--sp-3); width:220px; z-index:20; }
+  .health-row{ display:flex; align-items:center; gap:.5rem; padding:.3rem 0; font-size:.8125rem; }
+  .dot{ width:8px; height:8px; border-radius:50%; background:var(--ink-faint); flex:0 0 auto; }
+  .dot.ok{ background:var(--good); } .dot.bad{ background:var(--bad); }
+
+  .main{ overflow-y:auto; }
+  .page{ padding:var(--sp-6); max-width:1080px; margin:0 auto; display:flex; flex-direction:column; gap:var(--sp-5); }
+  .page-head{ display:flex; align-items:flex-start; justify-content:space-between; gap:var(--sp-4); flex-wrap:wrap; }
+  .breadcrumb{ font-size:.75rem; color:var(--ink-muted); display:flex; align-items:center; gap:.35rem; margin-bottom:.3rem; }
+  .breadcrumb button{ background:none; border:none; color:var(--accent); cursor:pointer; font-size:inherit; padding:0; }
+  h1.page-title{ font-size:1.375rem; margin:0; letter-spacing:-.01em; }
+  .page-sub{ color:var(--ink-muted); margin:.2rem 0 0; font-size:.8438rem; max-width:60ch; }
+
+  /* stat tiles */
+  .stat-row{ display:grid; grid-template-columns:repeat(4,1fr); gap:var(--sp-4); }
+  @media (max-width:760px){ .stat-row{ grid-template-columns:repeat(2,1fr); } }
+  .stat-tile{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:var(--sp-4); box-shadow:var(--shadow-sm); }
+  .stat-label{ font-size:.75rem; color:var(--ink-muted); display:flex; align-items:center; gap:.4rem; }
+  .stat-value{ font-size:1.625rem; font-weight:700; margin-top:.35rem; font-variant-numeric:tabular-nums; }
+  .stat-value.good{ color:var(--good); } .stat-value.bad{ color:var(--bad); }
+
+  .card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); box-shadow:var(--shadow-sm); padding:var(--sp-5); display:flex; flex-direction:column; gap:var(--sp-4); }
+  .card-head{ display:flex; align-items:center; justify-content:space-between; gap:var(--sp-3); }
+  .card-title{ font-size:.9375rem; font-weight:700; margin:0; }
+  .card-hint{ font-size:.8125rem; color:var(--ink-muted); margin:0; }
+
+  .btn{ display:inline-flex; align-items:center; gap:.4rem; border:1px solid var(--accent); background:var(--accent); color:var(--accent-contrast); border-radius:var(--r-sm); padding:.55rem 1rem; cursor:pointer; font-size:.8438rem; font-weight:600; }
+  .btn:hover{ background:var(--accent-strong); border-color:var(--accent-strong); }
+  .btn.secondary{ background:none; color:var(--accent); }
+  .btn.secondary:hover{ background:var(--accent-soft); }
+  .btn.ghost{ background:none; border-color:var(--border); color:var(--ink-muted); }
+  .btn.ghost:hover{ color:var(--ink); border-color:var(--border-strong); }
+  .btn.danger{ background:none; border-color:var(--bad); color:var(--bad); }
+  .btn.danger:hover{ background:var(--bad-soft); }
+  .btn.small{ padding:.35rem .7rem; font-size:.75rem; }
+  .btn.block{ width:100%; justify-content:center; }
+  .btn:disabled{ opacity:.5; cursor:not-allowed; }
+
+  .field{ display:flex; flex-direction:column; gap:.3rem; }
+  .field label{ font-size:.75rem; color:var(--ink-muted); font-weight:600; }
+  .field input, .field select, .field textarea{ background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--r-sm); padding:.55rem .65rem; width:100%; }
+  .field input:focus, .field select:focus, .field textarea:focus{ border-color:var(--accent); background:var(--surface); }
+  .field-row{ display:flex; gap:var(--sp-3); flex-wrap:wrap; }
+  .field-row .field{ flex:1 1 140px; }
+  form{ display:flex; flex-direction:column; gap:var(--sp-3); }
+
+  .toolbar{ display:flex; align-items:center; gap:var(--sp-3); flex-wrap:wrap; }
+  .search-box{ display:flex; align-items:center; gap:.4rem; background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--r-sm); padding:.4rem .6rem; flex:1; min-width:160px; color:var(--ink-muted); }
+  .search-box input{ border:none; background:none; flex:1; padding:0; color:var(--ink); }
+  .search-box input:focus{ outline:none; }
+
+  table{ width:100%; border-collapse:collapse; font-size:.8125rem; }
+  th, td{ text-align:left; padding:.65rem .7rem; border-bottom:1px solid var(--border); }
+  th{ color:var(--ink-muted); font-weight:600; font-size:.6875rem; text-transform:uppercase; letter-spacing:.04em; }
+  tbody tr{ cursor:default; }
+  tbody tr.clickable{ cursor:pointer; }
+  tbody tr.clickable:hover{ background:var(--surface-alt); }
+  tbody tr.row-anomaly{ background:var(--bad-soft); }
+  td.num{ font-variant-numeric:tabular-nums; font-family:var(--font-mono); }
+  .table-wrap{ overflow-x:auto; }
+  .id-chip{ font-family:var(--font-mono); font-size:.6875rem; background:var(--surface-alt); border:1px solid var(--border); border-radius:4px; padding:.15rem .4rem; cursor:pointer; color:var(--ink-muted); white-space:nowrap; }
+  .id-chip:hover{ color:var(--ink); border-color:var(--border-strong); }
+
+  .pill{ display:inline-flex; align-items:center; gap:.3rem; font-size:.6875rem; font-weight:700; padding:.2rem .55rem; border-radius:99px; white-space:nowrap; }
+  .pill::before{ content:""; width:6px; height:6px; border-radius:50%; background:currentColor; }
+  .pill.good{ background:var(--good-soft); color:var(--good); }
+  .pill.warn{ background:var(--warn-soft); color:var(--warn); }
+  .pill.bad{ background:var(--bad-soft); color:var(--bad); }
+  .pill.neutral{ background:var(--surface-alt); color:var(--ink-muted); border:1px solid var(--border); }
+  .pill.accent{ background:var(--accent-soft); color:var(--accent-strong); }
+
+  .empty-state{ text-align:center; padding:var(--sp-6) var(--sp-4); color:var(--ink-muted); }
+  .empty-state .icon{ width:32px; height:32px; margin:0 auto var(--sp-3); color:var(--ink-faint); }
+  .empty-state p{ margin:0; font-size:.8438rem; }
+  .empty-row td{ text-align:center; color:var(--ink-muted); padding:var(--sp-5) 0; }
+
+  .patient-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:var(--sp-4); }
+  .patient-card{ background:var(--surface); border:1px solid var(--border); border-radius:var(--r-md); padding:var(--sp-4); box-shadow:var(--shadow-sm); cursor:pointer; display:flex; flex-direction:column; gap:.5rem; }
+  .patient-card:hover{ border-color:var(--accent); box-shadow:var(--shadow-md); }
+  .patient-card-top{ display:flex; align-items:center; gap:.6rem; }
+  .patient-name{ font-weight:700; font-size:.9375rem; }
+  .patient-meta{ font-size:.75rem; color:var(--ink-muted); }
+
+  /* ══════════════════════════ MODAL ══════════════════════════ */
+  .modal-overlay{ position:fixed; inset:0; background:rgba(10,15,15,.45); display:flex; align-items:center; justify-content:center; z-index:60; padding:var(--sp-4); }
+  .modal-panel{ background:var(--surface); border-radius:var(--r-lg); box-shadow:var(--shadow-lg); width:100%; max-width:460px; max-height:90vh; overflow-y:auto; padding:var(--sp-5); display:flex; flex-direction:column; gap:var(--sp-4); }
+  .modal-head{ display:flex; align-items:center; justify-content:space-between; }
+  .modal-title{ font-size:1.0625rem; font-weight:700; margin:0; }
+
+  /* ══════════════════════════ CHAT / RAG ══════════════════════════ */
+  .rag-layout{ display:grid; grid-template-columns:1fr 280px; gap:var(--sp-4); align-items:start; }
+  @media (max-width:800px){ .rag-layout{ grid-template-columns:1fr; } }
+  .chat-card{ display:flex; flex-direction:column; height:560px; }
+  .chat-log{ flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:var(--sp-3); padding:var(--sp-2) var(--sp-1); }
+  .chat-row{ display:flex; gap:.6rem; max-width:88%; }
+  .chat-row.user{ align-self:flex-end; flex-direction:row-reverse; }
+  .chat-bubble{ padding:.65rem .85rem; border-radius:var(--r-md); font-size:.8438rem; }
+  .chat-row.user .chat-bubble{ background:var(--accent); color:var(--accent-contrast); border-bottom-right-radius:2px; }
+  .chat-row.assistant .chat-bubble{ background:var(--surface-alt); border:1px solid var(--border); border-bottom-left-radius:2px; }
+  .chat-ava{ width:26px; height:26px; border-radius:50%; display:flex; align-items:center; justify-content:center; flex:0 0 auto; font-size:.6875rem; font-weight:700; }
+  .chat-row.user .chat-ava{ background:var(--accent-soft); color:var(--accent-strong); }
+  .chat-row.assistant .chat-ava{ background:var(--surface-alt); border:1px solid var(--border); color:var(--ink-muted); }
+  .chat-sources{ margin-top:.5rem; display:flex; gap:.3rem; flex-wrap:wrap; }
+  .chat-input-row{ display:flex; gap:var(--sp-2); border-top:1px solid var(--border); padding-top:var(--sp-3); }
+  .chat-input-row input{ flex:1; }
+  .chat-empty{ margin:auto; text-align:center; color:var(--ink-muted); font-size:.8438rem; }
+
+  .toast-stack{ position:fixed; bottom:var(--sp-5); right:var(--sp-5); display:flex; flex-direction:column; gap:var(--sp-2); z-index:80; width:300px; }
+  .toast{ background:var(--surface); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--r-sm); padding:.65rem .9rem; font-size:.8125rem; box-shadow:var(--shadow-md); }
+  .toast.error{ border-left-color:var(--bad); }
+  .toast.success{ border-left-color:var(--good); }
+  code.inline{ font-family:var(--font-mono); background:var(--surface-alt); border:1px solid var(--border); border-radius:4px; padding:.05rem .3rem; font-size:.85em; }
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════ AUTH SCREEN ══════════════════════════ -->
+<div class="auth-screen" id="auth-screen">
+  <div class="auth-brand">
+    <svg class="auth-brand-wave" viewBox="0 0 600 200" preserveAspectRatio="none" width="100%" height="220"><path d="M0,100 L220,100 L235,40 L252,160 L268,100 L600,100" stroke="white" stroke-width="2" fill="none"/></svg>
+    <div class="auth-brand-top">
+      <div class="auth-brand-mark"><svg class="icon" style="stroke:#fff;width:18px;height:18px" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div>
+      Clinic Ops Console
+    </div>
+    <div class="auth-brand-body">
+      <h1>Multi-tenant clinic operations, in one place.</h1>
+      <p>Patients, live vitals with anomaly detection, and a document-grounded clinical assistant — scoped per clinic, backed by the Intelligent Clinic System API.</p>
+    </div>
+    <div class="auth-brand-foot" id="auth-origin-label"></div>
+  </div>
+
+  <div class="auth-form-side">
+    <div class="auth-card">
+      <div class="auth-tabs">
+        <button class="auth-tab is-active" data-auth-tab="login">Log in</button>
+        <button class="auth-tab" data-auth-tab="register">Register</button>
+      </div>
+
+      <div class="auth-panel" id="panel-login">
+        <h2>Welcome back</h2>
+        <p class="sub">Sign in with your clinic account.</p>
+        <form id="form-login">
+          <div class="field"><label>Email</label><input type="email" name="email" required placeholder="you@clinic.com" autocomplete="username"></div>
+          <div class="field"><label>Password</label><input type="password" name="password" required autocomplete="current-password"></div>
+          <button class="btn block" type="submit">Log in</button>
+        </form>
+      </div>
+
+      <div class="auth-panel" id="panel-register" hidden>
+        <h2>Create an account</h2>
+        <p class="sub">Requires a clinic ID — ask your admin, or create a clinic once you have any admin login.</p>
+        <form id="form-register">
+          <div class="field"><label>Full name</label><input type="text" name="full_name" required></div>
+          <div class="field"><label>Email</label><input type="email" name="email" required autocomplete="username"></div>
+          <div class="field"><label>Password</label><input type="password" name="password" required autocomplete="new-password"></div>
+          <div class="field-row">
+            <div class="field"><label>Role</label>
+              <select name="role"><option value="user">user</option><option value="nurse">nurse</option><option value="doctor">doctor</option><option value="admin">admin</option></select>
+            </div>
+            <div class="field"><label>Clinic ID</label><input type="text" name="clinic_id" required placeholder="uuid"></div>
+          </div>
+          <button class="btn block" type="submit">Register &amp; log in</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════ APP SHELL ══════════════════════════ -->
+<div class="shell" id="shell" hidden>
+  <div class="nav-scrim" id="nav-scrim"></div>
+  <aside class="sidebar" id="sidebar">
+    <div class="side-brand">
+      <div class="side-brand-mark"><svg class="icon" style="stroke:#fff;width:16px;height:16px" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg></div>
+      Clinic Ops Console
+    </div>
+    <nav class="side-nav">
+      <div class="nav-group">
+        <button class="nav-btn" data-page="dashboard">
+          <svg class="icon" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1.5"/><rect x="13" y="3" width="8" height="5" rx="1.5"/><rect x="13" y="10" width="8" height="11" rx="1.5"/><rect x="3" y="13" width="8" height="8" rx="1.5"/></svg>
+          Dashboard
+        </button>
+      </div>
+      <div>
+        <div class="nav-group-label">Care</div>
+        <div class="nav-group">
+          <button class="nav-btn" data-page="patients">
+            <svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/><circle cx="17.5" cy="8.5" r="2.4"/><path d="M15.7 14.8c2.6.3 4.3 2.2 4.3 5.2"/></svg>
+            Patients
+          </button>
+          <button class="nav-btn" data-page="rag">
+            <svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16v10H9l-4 4v-4H4z"/></svg>
+            RAG Assistant
+          </button>
+        </div>
+      </div>
+      <div data-admin-only hidden>
+        <div class="nav-group-label">Administration</div>
+        <div class="nav-group">
+          <button class="nav-btn" data-page="clinics">
+            <svg class="icon" viewBox="0 0 24 24"><rect x="4" y="9" width="16" height="12"/><path d="M9 21v-5h6v5M4 9l8-6 8 6"/></svg>
+            Clinics
+          </button>
+        </div>
+      </div>
+    </nav>
+    <div class="side-foot">
+      <div class="avatar" id="side-avatar">?</div>
+      <div class="side-foot-info">
+        <div class="side-foot-name" id="side-name">—</div>
+        <div class="side-foot-role" id="side-role">—</div>
+      </div>
+      <button class="icon-btn" id="btn-logout" title="Log out" aria-label="Log out">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M9 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h3M15 8l4 4-4 4M9 12h10"/></svg>
+      </button>
+    </div>
+  </aside>
+
+  <div>
+    <header class="topbar">
+      <button class="icon-btn" id="nav-toggle" style="display:none" aria-label="Toggle menu">
+        <svg class="icon" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+      </button>
+      <div>
+        <div class="topbar-title" id="topbar-title">Dashboard</div>
+        <div class="topbar-sub" id="topbar-sub">—</div>
+      </div>
+      <div class="topbar-spacer"></div>
+      <div style="position:relative">
+        <button class="icon-btn" id="health-toggle" aria-label="System status"><span class="dot" id="health-dot"></span></button>
+        <div class="health-pop" id="health-pop" hidden></div>
+      </div>
+      <button class="icon-btn" id="theme-toggle" title="Toggle theme" aria-label="Toggle theme">
+        <svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>
+      </button>
+    </header>
+
+    <main class="main">
+      <!-- DASHBOARD -->
+      <section class="page" id="page-dashboard">
+        <div class="page-head">
+          <div><h1 class="page-title">Dashboard</h1><p class="page-sub">A quick read on your clinic — patients, recent vitals, and anything the anomaly detector flagged.</p></div>
+          <button class="btn secondary small" id="dash-refresh">Refresh</button>
+        </div>
+        <div class="stat-row" id="stat-row">
+          <div class="stat-tile"><div class="stat-label">Patients</div><div class="stat-value" id="stat-patients">–</div></div>
+          <div class="stat-tile"><div class="stat-label">Readings logged</div><div class="stat-value" id="stat-readings">–</div></div>
+          <div class="stat-tile"><div class="stat-label">Anomalies flagged</div><div class="stat-value bad" id="stat-anomalies">–</div></div>
+          <div class="stat-tile"><div class="stat-label">System health</div><div class="stat-value good" id="stat-health">–</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2 class="card-title">Recent anomalies</h2></div>
+          <div class="table-wrap"><table id="table-recent-anomalies"><thead><tr><th>Patient</th><th>Time</th><th>HR</th><th>BP</th><th>O2</th><th>Temp</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- PATIENTS (list) -->
+      <section class="page" id="page-patients" hidden>
+        <div class="page-head">
+          <div><h1 class="page-title">Patients</h1><p class="page-sub">Scoped to your clinic. Click a patient to view vitals and history.</p></div>
+          <button class="btn small" id="btn-open-add-patient" data-clinical-only><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Add patient</button>
+        </div>
+        <div class="toolbar">
+          <div class="search-box"><svg class="icon" viewBox="0 0 24 24" style="width:15px;height:15px"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg><input type="text" id="patient-search" placeholder="Search patients by name or MRN…"></div>
+          <button class="btn ghost small" id="refresh-patients">Refresh</button>
+        </div>
+        <div class="patient-grid" id="patient-grid"></div>
+      </section>
+
+      <!-- PATIENT DETAIL -->
+      <section class="page" id="page-patient-detail" hidden>
+        <div>
+          <div class="breadcrumb"><button data-page="patients">Patients</button> / <span id="pd-crumb">—</span></div>
+          <div class="page-head">
+            <div><h1 class="page-title" id="pd-name">—</h1><p class="page-sub" id="pd-meta">—</p></div>
+            <div class="toolbar">
+              <button class="btn ghost small" id="btn-edit-patient" data-clinical-only>Edit</button>
+              <button class="btn danger small" id="btn-delete-patient" data-clinical-only>Delete</button>
+              <button class="btn small" id="btn-open-ingest" data-clinical-only><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>Log reading</button>
+            </div>
+          </div>
+        </div>
+        <div class="stat-row">
+          <div class="stat-tile"><div class="stat-label">Heart rate</div><div class="stat-value" id="pd-hr">–</div></div>
+          <div class="stat-tile"><div class="stat-label">Blood pressure</div><div class="stat-value" id="pd-bp">–</div></div>
+          <div class="stat-tile"><div class="stat-label">O2 saturation</div><div class="stat-value" id="pd-o2">–</div></div>
+          <div class="stat-tile"><div class="stat-label">Temperature</div><div class="stat-value" id="pd-temp">–</div></div>
+        </div>
+        <div class="card">
+          <div class="card-head"><h2 class="card-title">Reading history</h2>
+            <div class="toolbar">
+              <button class="btn ghost small is-active" data-filter="all">All</button>
+              <button class="btn ghost small" data-filter="anomaly">Anomalies only</button>
+            </div>
+          </div>
+          <div class="table-wrap"><table id="table-pd-readings"><thead><tr><th>Time</th><th>HR</th><th>BP</th><th>O2</th><th>Temp</th><th>Status</th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+
+      <!-- RAG -->
+      <section class="page" id="page-rag" hidden>
+        <div class="page-head">
+          <div><h1 class="page-title">RAG Assistant</h1><p class="page-sub">Answers are grounded only in documents uploaded for your clinic.</p></div>
+          <button class="btn small" id="btn-open-upload"><svg class="icon" viewBox="0 0 24 24"><path d="M12 16V4M7 9l5-5 5 5M4 20h16"/></svg>Upload document</button>
+        </div>
+        <div class="rag-layout">
+          <div class="card chat-card">
+            <div class="chat-log" id="chat-log"><div class="chat-empty">Ask something once you've uploaded a document.</div></div>
+            <form id="form-ask" class="chat-input-row">
+              <input type="text" name="query" placeholder="Ask a question about an uploaded document…" required>
+              <button class="btn" type="submit">Ask</button>
+            </form>
+          </div>
+          <div class="card">
+            <h2 class="card-title">Session</h2>
+            <p class="card-hint">Answers cite the source file(s) they were drawn from, shown under each response.</p>
+            <button class="btn ghost small block" id="refresh-history">Reload history</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- CLINICS (admin) -->
+      <section class="page" id="page-clinics" hidden>
+        <div class="page-head">
+          <div><h1 class="page-title">Clinics</h1><p class="page-sub">Create, update, and remove tenant clinics. Admin only.</p></div>
+          <button class="btn small" id="btn-open-add-clinic"><svg class="icon" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New clinic</button>
+        </div>
+        <div class="card">
+          <div class="table-wrap"><table id="table-clinics"><thead><tr><th>ID</th><th>Name</th><th>Address</th><th>Phone</th><th>Created</th><th></th></tr></thead><tbody></tbody></table></div>
+        </div>
+      </section>
+    </main>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-root" hidden>
+  <div class="modal-panel" id="modal-panel"></div>
+</div>
+
+<div class="toast-stack" id="toast-stack"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ── icons used inside JS-generated markup ─────────────────────────── */
+  var ICON_PULSE = '<svg class="icon" viewBox="0 0 24 24"><path d="M3 12h4l2-7 4 14 2-7h6"/></svg>';
+  var ICON_INBOX = '<svg class="icon" viewBox="0 0 24 24"><path d="M4 5h16v10H9l-4 4v-4H4z"/></svg>';
+  var ICON_PEOPLE = '<svg class="icon" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-5.5 6-5.5s6 2.2 6 5.5"/></svg>';
+
+  function escapeHtml(s){
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function(c){
+      return { "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c];
+    });
+  }
+  function initials(name){
+    if(!name) return "?";
+    var parts = name.trim().split(/\s+/);
+    return (parts[0][0] + (parts[1] ? parts[1][0] : "")).toUpperCase();
+  }
+
+  /* ══════════════════════ THEME ══════════════════════ */
+  var THEME_KEY = "clinic-console-theme";
+  (function initTheme(){
+    var saved = null;
+    try{ saved = localStorage.getItem(THEME_KEY); }catch(e){}
+    if(saved) document.documentElement.setAttribute("data-theme", saved);
+  })();
+  document.getElementById("theme-toggle").addEventListener("click", function(){
+    var current = document.documentElement.getAttribute("data-theme");
+    var prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var next = !current ? (prefersDark ? "light" : "dark") : (current === "dark" ? "light" : "dark");
+    document.documentElement.setAttribute("data-theme", next);
+    try{ localStorage.setItem(THEME_KEY, next); }catch(e){}
+  });
+
+  document.getElementById("auth-origin-label").textContent = window.location.origin;
+
+  /* ══════════════════════ TOASTS ══════════════════════ */
+  function toast(message, kind){
+    var stack = document.getElementById("toast-stack");
+    var el = document.createElement("div");
+    el.className = "toast" + (kind ? " " + kind : "");
+    el.textContent = message;
+    stack.appendChild(el);
+    setTimeout(function(){ el.remove(); }, 5000);
+  }
+
+  /* ══════════════════════ MODAL ══════════════════════ */
+  var modalRoot = document.getElementById("modal-root");
+  var modalPanel = document.getElementById("modal-panel");
+  function openModal(title, bodyHtml, onMount){
+    modalPanel.innerHTML =
+      '<div class="modal-head"><h2 class="modal-title">' + escapeHtml(title) + '</h2>' +
+      '<button class="icon-btn" id="modal-close" aria-label="Close"><svg class="icon" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button></div>' +
+      bodyHtml;
+    modalRoot.hidden = false;
+    document.getElementById("modal-close").addEventListener("click", closeModal);
+    if(onMount) onMount(modalPanel);
+  }
+  function closeModal(){ modalRoot.hidden = true; modalPanel.innerHTML = ""; }
+  modalRoot.addEventListener("click", function(e){ if(e.target === modalRoot) closeModal(); });
+  document.addEventListener("keydown", function(e){ if(e.key === "Escape") closeModal(); });
+
+  /* ══════════════════════ SESSION / TOKEN ══════════════════════ */
+  var TOKEN_KEY = "clinic-console-token";
+  var token = null;
+  try{ token = localStorage.getItem(TOKEN_KEY); }catch(e){}
+
+  function decodeJWT(t){
+    try{
+      var payload = t.split(".")[1].replace(/-/g,"+").replace(/_/g,"/");
+      var json = decodeURIComponent(atob(payload).split("").map(function(c){
+        return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2);
+      }).join(""));
+      return JSON.parse(json);
+    }catch(e){ return null; }
+  }
+  function claims(){ return token ? decodeJWT(token) : null; }
+  function isClinical(){ var c = claims(); return c && ["admin","doctor","nurse"].indexOf(c.role) !== -1; }
+  function isAdmin(){ var c = claims(); return c && c.role === "admin"; }
+
+  function setToken(t){
+    token = t;
+    try{ if(t) localStorage.setItem(TOKEN_KEY, t); else localStorage.removeItem(TOKEN_KEY); }catch(e){}
+    renderAuthState();
+  }
+
+  function renderAuthState(){
+    var c = claims();
+    document.getElementById("auth-screen").hidden = !!c;
+    document.getElementById("shell").hidden = !c;
+    if(!c) return;
+
+    document.getElementById("side-avatar").textContent = c.role ? c.role[0].toUpperCase() : "?";
+    document.getElementById("side-name").textContent = c.sub;
+    document.getElementById("side-role").textContent = c.role + " · clinic " + c.clinic_id.slice(0,8) + "…";
+    document.querySelectorAll("[data-admin-only]").forEach(function(el){ el.hidden = !isAdmin(); });
+    document.querySelectorAll("[data-clinical-only]").forEach(function(el){ el.hidden = !isClinical(); });
+  }
+
+  /* ══════════════════════ API HELPER ══════════════════════ */
+  function api(path, opts){
+    opts = opts || {};
+    var headers = opts.headers || {};
+    if(token) headers["Authorization"] = "Bearer " + token;
+    return fetch(path, Object.assign({}, opts, { headers: headers })).then(function(res){
+      if(res.status === 204) return null;
+      return res.json().catch(function(){ return null; }).then(function(body){
+        if(!res.ok){
+          var msg = (body && body.detail) ? (typeof body.detail === "string" ? body.detail : JSON.stringify(body.detail)) : (res.status + " " + res.statusText);
+          if(res.status === 401){ setToken(null); toast("Session expired — please log in again.", "error"); }
+          var err = new Error(msg); err.status = res.status; throw err;
+        }
+        return body;
+      });
+    });
+  }
+
+  /* ══════════════════════ AUTH FORMS ══════════════════════ */
+  document.querySelectorAll(".auth-tab").forEach(function(tab){
+    tab.addEventListener("click", function(){
+      document.querySelectorAll(".auth-tab").forEach(function(t){ t.classList.remove("is-active"); });
+      tab.classList.add("is-active");
+      document.getElementById("panel-login").hidden = tab.dataset.authTab !== "login";
+      document.getElementById("panel-register").hidden = tab.dataset.authTab !== "register";
+    });
+  });
+
+  function loginRequest(email, password){
+    var body = new URLSearchParams();
+    body.set("username", email); body.set("password", password);
+    return fetch("/api/auth/login", { method:"POST", headers:{"Content-Type":"application/x-www-form-urlencoded"}, body: body.toString() })
+      .then(function(r){ return r.json().then(function(b){ if(!r.ok) throw new Error(b.detail || "Login failed"); return b; }); });
+  }
+
+  document.getElementById("form-login").addEventListener("submit", function(e){
+    e.preventDefault();
+    var f = new FormData(e.target);
+    loginRequest(f.get("email"), f.get("password")).then(function(data){
+      setToken(data.access_token);
+      toast("Welcome back", "success");
+      goPage("dashboard");
+    }).catch(function(err){ toast(err.message, "error"); });
+  });
+
+  document.getElementById("form-register").addEventListener("submit", function(e){
+    e.preventDefault();
+    var f = new FormData(e.target);
+    var payload = { email:f.get("email"), password:f.get("password"), full_name:f.get("full_name"), role:f.get("role"), clinic_id:f.get("clinic_id") };
+    fetch("/api/auth/register", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify(payload) })
+      .then(function(r){ return r.json().then(function(b){ if(!r.ok) throw new Error(typeof b.detail === "string" ? b.detail : JSON.stringify(b.detail)); return b; }); })
+      .then(function(){ toast("Registered — logging in…", "success"); return loginRequest(payload.email, payload.password); })
+      .then(function(data){ setToken(data.access_token); goPage("dashboard"); })
+      .catch(function(err){ toast(err.message, "error"); });
+  });
+
+  document.getElementById("btn-logout").addEventListener("click", function(){
+    setToken(null); toast("Logged out"); location.reload();
+  });
+
+  /* ══════════════════════ NAV / PAGES ══════════════════════ */
+  var PAGE_TITLES = {
+    dashboard: ["Dashboard", "Overview of your clinic"],
+    patients: ["Patients", "Everyone registered at your clinic"],
+    "patient-detail": ["Patient", ""],
+    rag: ["RAG Assistant", "Document-grounded Q&A"],
+    clinics: ["Clinics", "Tenant administration"]
+  };
+  function goPage(name){
+    document.querySelectorAll(".page").forEach(function(p){ p.hidden = (p.id !== "page-" + name); });
+    document.querySelectorAll(".nav-btn[data-page]").forEach(function(b){ b.classList.toggle("is-active", b.dataset.page === name); });
+    var t = PAGE_TITLES[name];
+    if(t){ document.getElementById("topbar-title").textContent = t[0]; document.getElementById("topbar-sub").textContent = t[1]; }
+    document.getElementById("shell").classList.remove("nav-open");
+    if(name === "dashboard") loadDashboard();
+    if(name === "patients") loadPatients();
+    if(name === "rag") loadHistory();
+    if(name === "clinics") loadClinics();
+  }
+  document.querySelectorAll("[data-page]").forEach(function(el){
+    el.addEventListener("click", function(){ goPage(el.dataset.page); });
+  });
+
+  var navToggle = document.getElementById("nav-toggle");
+  function updateNavToggleVisibility(){ navToggle.style.display = window.innerWidth <= 900 ? "flex" : "none"; }
+  window.addEventListener("resize", updateNavToggleVisibility);
+  updateNavToggleVisibility();
+  navToggle.addEventListener("click", function(){ document.getElementById("shell").classList.toggle("nav-open"); });
+  document.getElementById("nav-scrim").addEventListener("click", function(){ document.getElementById("shell").classList.remove("nav-open"); });
+
+  /* ══════════════════════ HEALTH ══════════════════════ */
+  function loadHealth(){
+    return fetch("/health").then(function(r){ return r.json(); }).then(function(data){
+      var order = ["database","ml_model","llm"];
+      var allOk = order.every(function(k){ return data[k] === "ok"; });
+      document.getElementById("health-dot").className = "dot " + (allOk ? "ok" : "bad");
+      document.getElementById("health-pop").innerHTML = order.map(function(k){
+        var ok = data[k] === "ok";
+        return '<div class="health-row"><span class="dot ' + (ok?"ok":"bad") + '"></span>' + k.replace("_"," ") + ' <span style="margin-left:auto;color:var(--ink-faint)">' + escapeHtml(String(data[k])) + '</span></div>';
+      }).join("");
+      return data;
+    }).catch(function(){
+      document.getElementById("health-dot").className = "dot bad";
+      document.getElementById("health-pop").innerHTML = '<div class="health-row"><span class="dot bad"></span>unreachable</div>';
+    });
+  }
+  var healthToggle = document.getElementById("health-toggle");
+  var healthPop = document.getElementById("health-pop");
+  healthToggle.addEventListener("click", function(){ healthPop.hidden = !healthPop.hidden; });
+  document.addEventListener("click", function(e){ if(!healthToggle.contains(e.target) && !healthPop.contains(e.target)) healthPop.hidden = true; });
+
+  /* ══════════════════════ DASHBOARD ══════════════════════ */
+  function loadDashboard(){
+    document.getElementById("stat-patients").textContent = "…";
+    document.getElementById("stat-readings").textContent = "…";
+    document.getElementById("stat-anomalies").textContent = "…";
+    loadHealth().then(function(data){
+      document.getElementById("stat-health").textContent = data && ["database","ml_model","llm"].every(function(k){ return data[k]==="ok"; }) ? "All systems go" : "Degraded";
+    });
+
+    api("/api/patients/").then(function(patients){
+      document.getElementById("stat-patients").textContent = patients.length;
+      if(!patients.length){
+        document.getElementById("stat-readings").textContent = 0;
+        document.getElementById("stat-anomalies").textContent = 0;
+        document.querySelector("#table-recent-anomalies tbody").innerHTML = '<tr><td colspan="6" class="empty-row">No patients yet — add one to get started.</td></tr>';
+        return;
+      }
+      Promise.all(patients.map(function(p){
+        return Promise.all([
+          api("/api/telemetry/readings?patient_id=" + p.id).catch(function(){ return []; }),
+          api("/api/telemetry/anomalies?patient_id=" + p.id).catch(function(){ return []; })
+        ]).then(function(res){ return { patient: p, readings: res[0], anomalies: res[1] }; });
+      })).then(function(results){
+        var totalReadings = results.reduce(function(n,r){ return n + r.readings.length; }, 0);
+        var allAnomalies = [];
+        results.forEach(function(r){ r.anomalies.forEach(function(a){ allAnomalies.push(Object.assign({}, a, { patientName: r.patient.name })); }); });
+        allAnomalies.sort(function(a,b){ return new Date(b.timestamp) - new Date(a.timestamp); });
+
+        document.getElementById("stat-readings").textContent = totalReadings;
+        document.getElementById("stat-anomalies").textContent = allAnomalies.length;
+
+        var tbody = document.querySelector("#table-recent-anomalies tbody");
+        if(!allAnomalies.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No anomalies flagged yet.</td></tr>'; return; }
+        tbody.innerHTML = allAnomalies.slice(0,8).map(function(r){
+          return "<tr><td>" + escapeHtml(r.patientName) + "</td><td>" + new Date(r.timestamp).toLocaleString() +
+            '</td><td class="num">' + (r.heart_rate ?? "–") + '</td><td class="num">' + fmtBP(r) +
+            '</td><td class="num">' + (r.oxygen_saturation ?? "–") + '</td><td class="num">' + (r.temperature ?? "–") + "</td></tr>";
+        }).join("");
+      });
+    }).catch(function(err){ toast(err.message, "error"); });
+  }
+  document.getElementById("dash-refresh").addEventListener("click", loadDashboard);
+
+  function fmtBP(r){ return (r.blood_pressure_systolic ?? "–") + "/" + (r.blood_pressure_diastolic ?? "–"); }
+  function statusPill(isAnomaly){ return isAnomaly ? '<span class="pill bad">Anomaly</span>' : '<span class="pill good">Normal</span>'; }
+
+  /* ══════════════════════ PATIENTS ══════════════════════ */
+  var patientCache = [];
+  function loadPatients(){
+    var grid = document.getElementById("patient-grid");
+    return api("/api/patients/").then(function(rows){
+      patientCache = rows || [];
+      renderPatientGrid(patientCache);
+      return patientCache;
+    }).catch(function(err){ toast(err.message, "error"); grid.innerHTML = ""; return []; });
+  }
+  function renderPatientGrid(rows){
+    var grid = document.getElementById("patient-grid");
+    if(!rows.length){
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1">' + ICON_PEOPLE + '<p>No patients match yet. Add your first patient to get started.</p></div>';
+      return;
+    }
+    grid.innerHTML = rows.map(function(p){
+      return '<div class="patient-card" data-open-patient="' + p.id + '">' +
+        '<div class="patient-card-top"><div class="avatar">' + initials(p.name) + '</div><div><div class="patient-name">' + escapeHtml(p.name) + '</div><div class="patient-meta">MRN ' + p.medical_record_number + '</div></div></div>' +
+        '<div class="patient-meta">' + escapeHtml(p.gender) + ' · DOB ' + escapeHtml(p.date_of_birth) + '</div>' +
+      '</div>';
+    }).join("");
+    grid.querySelectorAll("[data-open-patient]").forEach(function(card){
+      card.addEventListener("click", function(){ openPatientDetail(card.dataset.openPatient); });
+    });
+  }
+  document.getElementById("refresh-patients").addEventListener("click", loadPatients);
+  document.getElementById("patient-search").addEventListener("input", function(e){
+    var q = e.target.value.trim().toLowerCase();
+    var filtered = !q ? patientCache : patientCache.filter(function(p){
+      return p.name.toLowerCase().indexOf(q) !== -1 || String(p.medical_record_number).indexOf(q) !== -1;
+    });
+    renderPatientGrid(filtered);
+  });
+
+  function patientFormBody(existing){
+    return '<form id="modal-patient-form">' +
+      '<div class="field"><label>Name</label><input type="text" name="name" required value="' + (existing ? escapeHtml(existing.name) : "") + '"></div>' +
+      '<div class="field-row">' +
+      '<div class="field"><label>Date of birth</label><input type="date" name="date_of_birth" required value="' + (existing ? existing.date_of_birth : "") + '"></div>' +
+      '<div class="field"><label>Gender</label><input type="text" name="gender" placeholder="male / female / other" required value="' + (existing ? escapeHtml(existing.gender) : "") + '"></div>' +
+      '</div>' +
+      '<div class="field"><label>Medical record number</label><input type="number" name="medical_record_number" required value="' + (existing ? existing.medical_record_number : "") + '"></div>' +
+      '<button class="btn block" type="submit">' + (existing ? "Save changes" : "Create patient") + '</button>' +
+      '</form>';
+  }
+  document.getElementById("btn-open-add-patient").addEventListener("click", function(){
+    openModal("Add patient", patientFormBody(null), function(panel){
+      panel.querySelector("#modal-patient-form").addEventListener("submit", function(e){
+        e.preventDefault();
+        var f = new FormData(e.target);
+        api("/api/patients/", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+          name: f.get("name"), date_of_birth: f.get("date_of_birth"), gender: f.get("gender"),
+          medical_record_number: Number(f.get("medical_record_number"))
+        })}).then(function(){ toast("Patient created", "success"); closeModal(); loadPatients(); })
+          .catch(function(err){ toast(err.message, "error"); });
+      });
+    });
+  });
+
+  /* ══════════════════════ PATIENT DETAIL ══════════════════════ */
+  var currentPatientId = null;
+  var currentReadings = [];
+  function openPatientDetail(id){
+    currentPatientId = id;
+    api("/api/patients/" + id).then(function(p){
+      document.getElementById("pd-crumb").textContent = p.name;
+      document.getElementById("pd-name").textContent = p.name;
+      document.getElementById("pd-meta").textContent = escapeHtml(p.gender) + " · DOB " + p.date_of_birth + " · MRN " + p.medical_record_number;
+      document.getElementById("shell").querySelectorAll(".page").forEach(function(pg){ pg.hidden = pg.id !== "page-patient-detail"; });
+      document.getElementById("topbar-title").textContent = p.name;
+      document.getElementById("topbar-sub").textContent = "Patient record";
+      loadPatientReadings(id);
+      window._currentPatient = p;
+    }).catch(function(err){ toast(err.message, "error"); });
+  }
+  document.getElementById("btn-delete-patient").addEventListener("click", function(){
+    if(!currentPatientId) return;
+    api("/api/patients/" + currentPatientId, { method:"DELETE" })
+      .then(function(){ toast("Patient deleted", "success"); goPage("patients"); })
+      .catch(function(err){ toast(err.message, "error"); });
+  });
+  document.getElementById("btn-edit-patient").addEventListener("click", function(){
+    var p = window._currentPatient;
+    if(!p) return;
+    openModal("Edit patient", patientFormBody(p), function(panel){
+      panel.querySelector("#modal-patient-form").addEventListener("submit", function(e){
+        e.preventDefault();
+        var f = new FormData(e.target);
+        api("/api/patients/" + p.id, { method:"PUT", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+          name: f.get("name"), date_of_birth: f.get("date_of_birth"), gender: f.get("gender"),
+          medical_record_number: Number(f.get("medical_record_number"))
+        })}).then(function(){ toast("Patient updated", "success"); closeModal(); openPatientDetail(p.id); })
+          .catch(function(err){ toast(err.message, "error"); });
+      });
+    });
+  });
+
+  function loadPatientReadings(id){
+    api("/api/telemetry/readings?patient_id=" + id).then(function(rows){
+      currentReadings = rows || [];
+      var latest = currentReadings[0];
+      document.getElementById("pd-hr").textContent = latest ? (latest.heart_rate ?? "–") : "–";
+      document.getElementById("pd-bp").textContent = latest ? fmtBP(latest) : "–";
+      document.getElementById("pd-o2").textContent = latest ? (latest.oxygen_saturation ?? "–") + "%" : "–";
+      document.getElementById("pd-temp").textContent = latest ? (latest.temperature ?? "–") + "°C" : "–";
+      renderReadingsTable(currentReadings);
+    }).catch(function(err){ toast(err.message, "error"); });
+  }
+  function renderReadingsTable(rows){
+    var tbody = document.querySelector("#table-pd-readings tbody");
+    if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No readings logged yet.</td></tr>'; return; }
+    tbody.innerHTML = rows.map(function(r){
+      return '<tr class="' + (r.is_anomaly ? "row-anomaly" : "") + '"><td>' + new Date(r.timestamp).toLocaleString() +
+        '</td><td class="num">' + (r.heart_rate ?? "–") + '</td><td class="num">' + fmtBP(r) +
+        '</td><td class="num">' + (r.oxygen_saturation ?? "–") + '</td><td class="num">' + (r.temperature ?? "–") +
+        '</td><td>' + statusPill(r.is_anomaly) + '</td></tr>';
+    }).join("");
+  }
+  document.querySelectorAll('[data-filter]').forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelectorAll('[data-filter]').forEach(function(b){ b.classList.remove("is-active"); });
+      btn.classList.add("is-active");
+      renderReadingsTable(btn.dataset.filter === "anomaly" ? currentReadings.filter(function(r){ return r.is_anomaly; }) : currentReadings);
+    });
+  });
+
+  document.getElementById("btn-open-ingest").addEventListener("click", function(){
+    if(!currentPatientId) return;
+    var body =
+      '<form id="modal-ingest-form">' +
+      '<div class="field-row">' +
+      '<div class="field"><label>Heart rate (bpm)</label><input type="number" name="heart_rate" placeholder="72"></div>' +
+      '<div class="field"><label>O2 saturation (%)</label><input type="number" name="oxygen_saturation" placeholder="98"></div>' +
+      '</div><div class="field-row">' +
+      '<div class="field"><label>BP systolic</label><input type="number" name="blood_pressure_systolic" placeholder="118"></div>' +
+      '<div class="field"><label>BP diastolic</label><input type="number" name="blood_pressure_diastolic" placeholder="76"></div>' +
+      '</div>' +
+      '<div class="field"><label>Temperature (°C)</label><input type="number" step="0.1" name="temperature" placeholder="36.8"></div>' +
+      '<button class="btn block" type="submit">Ingest reading</button>' +
+      '</form>';
+    openModal("Log a telemetry reading", body, function(panel){
+      panel.querySelector("#modal-ingest-form").addEventListener("submit", function(e){
+        e.preventDefault();
+        var f = new FormData(e.target);
+        var c = claims();
+        function numOrNull(v){ return v === "" || v == null ? null : Number(v); }
+        api("/api/telemetry/ingest", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+          patient_id: currentPatientId, clinic_id: c.clinic_id,
+          heart_rate: numOrNull(f.get("heart_rate")), blood_pressure_systolic: numOrNull(f.get("blood_pressure_systolic")),
+          blood_pressure_diastolic: numOrNull(f.get("blood_pressure_diastolic")), oxygen_saturation: numOrNull(f.get("oxygen_saturation")),
+          temperature: numOrNull(f.get("temperature"))
+        })}).then(function(reading){
+          closeModal();
+          toast(reading.is_anomaly ? "Reading flagged as anomalous" : "Reading looks normal", reading.is_anomaly ? "error" : "success");
+          loadPatientReadings(currentPatientId);
+        }).catch(function(err){ toast(err.message, "error"); });
+      });
+    });
+  });
+
+  /* ══════════════════════ CLINICS ══════════════════════ */
+  function loadClinics(){
+    api("/api/clinics/").then(function(rows){
+      var tbody = document.querySelector("#table-clinics tbody");
+      if(!rows.length){ tbody.innerHTML = '<tr><td colspan="6" class="empty-row">No clinics yet.</td></tr>'; return; }
+      tbody.innerHTML = rows.map(function(c){
+        return "<tr>" +
+          '<td><span class="id-chip" data-copy="' + c.id + '">' + c.id.slice(0,8) + "…</span></td>" +
+          "<td>" + escapeHtml(c.name) + "</td><td>" + escapeHtml(c.address) + "</td><td>" + escapeHtml(c.phone_number) + "</td>" +
+          "<td>" + new Date(c.created_at).toLocaleDateString() + "</td>" +
+          '<td><button class="btn danger small" data-del-clinic="' + c.id + '">Delete</button></td></tr>';
+      }).join("");
+      tbody.querySelectorAll("[data-copy]").forEach(function(chip){
+        chip.addEventListener("click", function(){
+          if(navigator.clipboard) navigator.clipboard.writeText(chip.dataset.copy).then(function(){ toast("Copied clinic ID", "success"); }).catch(function(){});
+        });
+      });
+      tbody.querySelectorAll("[data-del-clinic]").forEach(function(btn){
+        btn.addEventListener("click", function(){
+          api("/api/clinics/" + btn.dataset.delClinic, { method:"DELETE" })
+            .then(function(){ toast("Clinic deleted", "success"); loadClinics(); }).catch(function(err){ toast(err.message, "error"); });
+        });
+      });
+    }).catch(function(err){ toast(err.message, "error"); });
+  }
+  document.getElementById("btn-open-add-clinic").addEventListener("click", function(){
+    var body = '<form id="modal-clinic-form">' +
+      '<div class="field"><label>Name</label><input type="text" name="name" required></div>' +
+      '<div class="field"><label>Address</label><input type="text" name="address" required></div>' +
+      '<div class="field"><label>Phone</label><input type="text" name="phone_number" required></div>' +
+      '<button class="btn block" type="submit">Create clinic</button></form>';
+    openModal("New clinic", body, function(panel){
+      panel.querySelector("#modal-clinic-form").addEventListener("submit", function(e){
+        e.preventDefault();
+        var f = new FormData(e.target);
+        api("/api/clinics/", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({
+          name: f.get("name"), address: f.get("address"), phone_number: f.get("phone_number")
+        })}).then(function(){ toast("Clinic created", "success"); closeModal(); loadClinics(); })
+          .catch(function(err){ toast(err.message, "error"); });
+      });
+    });
+  });
+
+  /* ══════════════════════ RAG ══════════════════════ */
+  function loadHistory(){
+    api("/api/rag/history").then(function(data){
+      var log = document.getElementById("chat-log");
+      log.innerHTML = "";
+      if(!data.messages || !data.messages.length){ log.innerHTML = '<div class="chat-empty">Ask something once you\'ve uploaded a document.</div>'; return; }
+      data.messages.forEach(function(m){ appendChat(m.role, m.message); });
+      log.scrollTop = log.scrollHeight;
+    }).catch(function(err){ toast(err.message, "error"); });
+  }
+  document.getElementById("refresh-history").addEventListener("click", loadHistory);
+
+  function appendChat(role, text, sources){
+    var log = document.getElementById("chat-log");
+    var empty = log.querySelector(".chat-empty");
+    if(empty) empty.remove();
+    var row = document.createElement("div");
+    row.className = "chat-row " + (role === "user" ? "user" : "assistant");
+    var c = claims();
+    var avaLabel = role === "user" ? initials(c ? c.sub : "U") : "AI";
+    row.innerHTML = '<div class="chat-ava">' + escapeHtml(avaLabel.slice(0,2)) + '</div><div class="chat-bubble">' + escapeHtml(text) + "</div>";
+    if(sources && sources.length){
+      row.querySelector(".chat-bubble").insertAdjacentHTML("beforeend",
+        '<div class="chat-sources">' + sources.map(function(s){ return '<span class="pill neutral">' + escapeHtml(s) + "</span>"; }).join("") + "</div>");
+    }
+    log.appendChild(row);
+    log.scrollTop = log.scrollHeight;
+  }
+
+  document.getElementById("btn-open-upload").addEventListener("click", function(){
+    var body = '<form id="modal-upload-form">' +
+      '<div class="field"><label>File (.pdf, .txt, .md)</label><input type="file" name="file" accept=".pdf,.txt,.md" required></div>' +
+      '<button class="btn block" type="submit">Upload &amp; embed</button></form>';
+    openModal("Upload document", body, function(panel){
+      panel.querySelector("#modal-upload-form").addEventListener("submit", function(e){
+        e.preventDefault();
+        var f = new FormData(e.target);
+        var headers = {};
+        if(token) headers["Authorization"] = "Bearer " + token;
+        fetch("/api/rag/upload", { method:"POST", headers: headers, body: f })
+          .then(function(r){ return r.json().then(function(b){ if(!r.ok) throw new Error(b.detail || "Upload failed"); return b; }); })
+          .then(function(data){ toast(data.message, "success"); closeModal(); })
+          .catch(function(err){ toast(err.message, "error"); });
+      });
+    });
+  });
+
+  document.getElementById("form-ask").addEventListener("submit", function(e){
+    e.preventDefault();
+    var f = new FormData(e.target);
+    var q = f.get("query");
+    if(!q) return;
+    appendChat("user", q);
+    e.target.reset();
+    api("/api/rag/query", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ query:q, top_k:5 }) })
+      .then(function(data){ appendChat("assistant", data.answer, data.sources); })
+      .catch(function(err){ appendChat("assistant", "Error: " + err.message); });
+  });
+
+  /* ══════════════════════ BOOT ══════════════════════ */
+  renderAuthState();
+  if(claims()) goPage("dashboard");
+  loadHealth();
+  setInterval(loadHealth, 20000);
+})();
+</script>
+</body>
+</html>

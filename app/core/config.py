@@ -13,10 +13,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
 
-    # RAG / LLM settings (Ollama)
-    ollama_base_url: str = "http://localhost:11434"
-    ollama_embedding_model: str = "nomic-embed-text"
-    ollama_chat_model: str = "llama3"
+    # RAG / LLM settings (Gemini)
+    gemini_api_key: str = ""
+    gemini_embedding_model: str = "text-embedding-004"
+    gemini_chat_model: str = "gemini-2.0-flash"
     embedding_dimensions: int = 768
     chunk_size: int = 500
     chunk_overlap: int = 50
@@ -29,6 +29,18 @@ class Settings(BaseSettings):
             warnings.warn(
                 "SECRET_KEY is using a placeholder value. "
                 "Set a strong random secret in .env for production.",
+                stacklevel=2,
+            )
+        return v
+
+    @field_validator("gemini_api_key")
+    @classmethod
+    def gemini_key_should_be_set(cls, v: str) -> str:
+        if not v:
+            import warnings
+            warnings.warn(
+                "GEMINI_API_KEY is not set. RAG document upload/query will fail until "
+                "you set it in .env (get a free key at https://aistudio.google.com/apikey).",
                 stacklevel=2,
             )
         return v
