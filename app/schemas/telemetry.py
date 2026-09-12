@@ -3,6 +3,7 @@ from uuid import UUID
 from datetime import datetime
 from typing import Optional
 
+
 class TelemetryReadingCreate(BaseModel):
     patient_id: UUID
     clinic_id: UUID
@@ -14,6 +15,7 @@ class TelemetryReadingCreate(BaseModel):
 
     class Config:
         from_attributes = True
+
 
 class TelemetryReadingResponse(BaseModel):
     id: UUID

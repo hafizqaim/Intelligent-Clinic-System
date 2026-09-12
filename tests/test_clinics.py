@@ -1,26 +1,32 @@
 """Tests for /api/clinics endpoints — full CRUD."""
-import pytest
+
 import httpx
 
-from tests.conftest import CLINIC_A_ID, CLINIC_B_ID
+from tests.conftest import CLINIC_A_ID
 
 
 class TestCreateClinic:
     async def test_create_clinic(self, client_admin: httpx.AsyncClient):
-        r = await client_admin.post("/api/clinics/", json={
-            "name": "Phase6 Clinic",
-            "address": "123 Test St",
-            "phone_number": "555-0006",
-        })
+        r = await client_admin.post(
+            "/api/clinics/",
+            json={
+                "name": "Phase6 Clinic",
+                "address": "123 Test St",
+                "phone_number": "555-0006",
+            },
+        )
         assert r.status_code == 201
         body = r.json()
         assert body["name"] == "Phase6 Clinic"
         assert "id" in body
 
     async def test_create_clinic_unauthenticated(self, client_anon: httpx.AsyncClient):
-        r = await client_anon.post("/api/clinics/", json={
-            "name": "Bad",
-        })
+        r = await client_anon.post(
+            "/api/clinics/",
+            json={
+                "name": "Bad",
+            },
+        )
         assert r.status_code == 401
 
 
@@ -58,9 +64,12 @@ class TestGetMyClinic:
 
 class TestUpdateClinic:
     async def test_update_clinic(self, client_admin: httpx.AsyncClient):
-        r = await client_admin.put(f"/api/clinics/{CLINIC_A_ID}", json={
-            "phone_number": "555-9999",
-        })
+        r = await client_admin.put(
+            f"/api/clinics/{CLINIC_A_ID}",
+            json={
+                "phone_number": "555-9999",
+            },
+        )
         assert r.status_code == 200
         assert r.json()["phone_number"] == "555-9999"
 
@@ -75,11 +84,14 @@ class TestUpdateClinic:
 class TestDeleteClinic:
     async def test_delete_clinic(self, client_admin: httpx.AsyncClient):
         # Create a throwaway clinic then delete it
-        cr = await client_admin.post("/api/clinics/", json={
-            "name": "ToDelete",
-            "address": "Nowhere",
-            "phone_number": "000",
-        })
+        cr = await client_admin.post(
+            "/api/clinics/",
+            json={
+                "name": "ToDelete",
+                "address": "Nowhere",
+                "phone_number": "000",
+            },
+        )
         cid = cr.json()["id"]
         r = await client_admin.delete(f"/api/clinics/{cid}")
         assert r.status_code == 204

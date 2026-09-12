@@ -1,4 +1,5 @@
 """FastAPI application factory with lifespan event for ML model loading."""
+
 import os
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
@@ -64,6 +65,7 @@ def create_app() -> FastAPI:
         # LLM (Gemini) — checked for configuration only, not a live call, since
         # this endpoint is polled frequently and a live call would burn quota.
         from app.core.config import settings
+
         checks["llm"] = "ok" if settings.gemini_api_key else "not configured"
 
         overall = "ok" if all(v == "ok" for v in checks.values()) else "degraded"

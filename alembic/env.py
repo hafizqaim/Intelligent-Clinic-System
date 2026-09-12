@@ -20,15 +20,21 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 # target_metadata = mymodel.Base.metadata
-import os, sys
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import os  # noqa: E402
+import sys  # noqa: E402
 
-from app.database import Base
-from app.models import *
-from app.core.config import settings
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from app.database import Base  # noqa: E402
+from app.models import *  # noqa: E402, F403
+from app.core.config import settings  # noqa: E402
+
 target_metadata = Base.metadata
 
-config.set_main_option('sqlalchemy.url', settings.database_url.replace('postgresql://', 'postgresql+asyncpg://'))
+config.set_main_option(
+    "sqlalchemy.url",
+    settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
+)
 
 
 # other values from the config, defined by the needs of env.py,

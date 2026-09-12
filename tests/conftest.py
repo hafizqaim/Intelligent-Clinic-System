@@ -3,11 +3,9 @@
 These are INTEGRATION tests that run against the real PostgreSQL database.
 The test database is cleaned between test sessions via the ``clean_db`` fixture.
 """
-import uuid
-import asyncio
+
 from typing import AsyncGenerator
 
-import pytest
 import pytest_asyncio
 import httpx
 from httpx import ASGITransport
@@ -95,7 +93,14 @@ async def seed(clean_db):
                     "VALUES (CAST(:id AS uuid), CAST(:cid AS uuid), :email, :pw, :name, CAST(:role AS role), true) "
                     "ON CONFLICT DO NOTHING"
                 ),
-                {"id": uid, "cid": cid, "email": email, "pw": hashed, "name": email.split("@")[0], "role": role},
+                {
+                    "id": uid,
+                    "cid": cid,
+                    "email": email,
+                    "pw": hashed,
+                    "name": email.split("@")[0],
+                    "role": role,
+                },
             )
         await db.commit()
     yield
@@ -105,7 +110,9 @@ async def seed(clean_db):
 # HTTP clients — one per clinic tenant
 # ---------------------------------------------------------------------------
 def _make_token(user_id: str, role: str, clinic_id: str) -> str:
-    return create_access_token(data={"sub": user_id, "role": role, "clinic_id": clinic_id})
+    return create_access_token(
+        data={"sub": user_id, "role": role, "clinic_id": clinic_id}
+    )
 
 
 @pytest_asyncio.fixture(scope="session")

@@ -1,10 +1,11 @@
 """Clinics router."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 
-from app.api.deps import get_current_user, get_tenant_db, require_admin
+from app.api.deps import get_current_user, require_admin
 from app.schemas.auth import TokenData
 from app.schemas.clinic import ClinicCreate, ClinicUpdate, ClinicResponse
 from app.models.clinic import Clinics
@@ -21,7 +22,12 @@ async def _get_db():
         await session.close()
 
 
-@router.post("/", response_model=ClinicResponse, status_code=201, dependencies=[Depends(require_admin)])
+@router.post(
+    "/",
+    response_model=ClinicResponse,
+    status_code=201,
+    dependencies=[Depends(require_admin)],
+)
 async def create_clinic(
     clinic: ClinicCreate,
     current_user: TokenData = Depends(get_current_user),
@@ -57,7 +63,9 @@ async def get_my_clinic(
     db: AsyncSession = Depends(_get_db),
 ):
     """Get the current user's clinic."""
-    result = await db.execute(select(Clinics).where(Clinics.id == current_user.clinic_id))
+    result = await db.execute(
+        select(Clinics).where(Clinics.id == current_user.clinic_id)
+    )
     clinic = result.scalars().first()
     if not clinic:
         raise HTTPException(status_code=404, detail="Clinic not found")
@@ -78,7 +86,9 @@ async def get_clinic(
     return clinic
 
 
-@router.put("/{clinic_id}", response_model=ClinicResponse, dependencies=[Depends(require_admin)])
+@router.put(
+    "/{clinic_id}", response_model=ClinicResponse, dependencies=[Depends(require_admin)]
+)
 async def update_clinic(
     clinic_id: str,
     updates: ClinicUpdate,

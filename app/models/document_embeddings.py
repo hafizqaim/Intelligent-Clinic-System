@@ -10,7 +10,9 @@ from datetime import datetime
 class DocumentEmbeddings(Base):
     __tablename__ = "document_embeddings"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4
+    )
     clinic_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     source_filename: Mapped[str] = mapped_column(String(255), nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)

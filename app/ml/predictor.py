@@ -1,4 +1,5 @@
 """ML model for anomaly detection in patient telemetry."""
+
 import os
 import pickle
 import numpy as np
@@ -38,11 +39,11 @@ class AnomalyDetector:
     def predict(self, vital_signs: List[Optional[float]]) -> bool:
         """
         Predict if a reading is anomalous.
-        
+
         Args:
             vital_signs: List of [heart_rate, bp_systolic, bp_diastolic, o2_sat, temperature]
                         Use 0.0 for missing values
-        
+
         Returns:
             True if anomalous, False if normal
         """

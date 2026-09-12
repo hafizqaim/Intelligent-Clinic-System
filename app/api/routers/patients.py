@@ -1,4 +1,5 @@
 """Patients router."""
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -12,7 +13,12 @@ from app.models.patients import Patients
 router = APIRouter()
 
 
-@router.post("/", response_model=PatientResponse, status_code=201, dependencies=[Depends(require_clinical_staff)])
+@router.post(
+    "/",
+    response_model=PatientResponse,
+    status_code=201,
+    dependencies=[Depends(require_clinical_staff)],
+)
 async def create_patient(
     patient: PatientCreate,
     current_user: TokenData = Depends(get_current_user),
@@ -58,7 +64,11 @@ async def get_patient(
     return patient
 
 
-@router.put("/{patient_id}", response_model=PatientResponse, dependencies=[Depends(require_clinical_staff)])
+@router.put(
+    "/{patient_id}",
+    response_model=PatientResponse,
+    dependencies=[Depends(require_clinical_staff)],
+)
 async def update_patient(
     patient_id: str,
     updates: PatientUpdate,
@@ -79,7 +89,9 @@ async def update_patient(
     return patient
 
 
-@router.delete("/{patient_id}", status_code=204, dependencies=[Depends(require_clinical_staff)])
+@router.delete(
+    "/{patient_id}", status_code=204, dependencies=[Depends(require_clinical_staff)]
+)
 async def delete_patient(
     patient_id: str,
     current_user: TokenData = Depends(get_current_user),

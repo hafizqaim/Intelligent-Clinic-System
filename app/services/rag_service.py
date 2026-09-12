@@ -1,7 +1,6 @@
 """RAG service: chunking, embedding, retrieval, and LLM answer generation."""
+
 import uuid
-from typing import Optional
-from datetime import datetime
 
 import httpx
 from sqlalchemy import text
@@ -13,6 +12,7 @@ GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta"
 
 
 # ── Text chunking ────────────────────────────────────────────────────────────
+
 
 def chunk_text(content: str, chunk_size: int = 0, chunk_overlap: int = 0) -> list[str]:
     """Split text into overlapping chunks by character count."""
@@ -31,6 +31,7 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
     """Extract text from a PDF file."""
     from PyPDF2 import PdfReader
     import io
+
     reader = PdfReader(io.BytesIO(file_bytes))
     pages = [page.extract_text() or "" for page in reader.pages]
     return "\n".join(pages)
@@ -38,17 +39,17 @@ def extract_text_from_pdf(file_bytes: bytes) -> str:
 
 # ── Embedding (Gemini) ───────────────────────────────────────────────────────
 
-async def generate_embeddings(texts: list[str]) -> list[list[float]]:
+
+async def generate_embeddings(texts: list[str], api_key: str) -> list[list[float]]:
     """Call Gemini's batch embeddings API for a list of texts in a single request."""
     model = settings.gemini_embedding_model
     requests_body = [
-        {"model": f"models/{model}", "content": {"parts": [{"text": t}]}}
-        for t in texts
+        {"model": f"models/{model}", "content": {"parts": [{"text": t}]}} for t in texts
     ]
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
             f"{GEMINI_BASE}/models/{model}:batchEmbedContents",
-            params={"key": settings.gemini_api_key},
+            params={"key": api_key},
             json={"requests": requests_body},
         )
         resp.raise_for_status()
@@ -58,18 +59,20 @@ async def generate_embeddings(texts: list[str]) -> list[list[float]]:
 
 # ── Document ingestion ───────────────────────────────────────────────────────
 
+
 async def ingest_document(
     db: AsyncSession,
     clinic_id: str,
     filename: str,
     content: str,
+    api_key: str,
 ) -> int:
     """Chunk the document, embed each chunk, and store in DB. Returns chunk count."""
     chunks = chunk_text(content)
     if not chunks:
         return 0
 
-    embeddings = await generate_embeddings(chunks)
+    embeddings = await generate_embeddings(chunks, api_key)
 
     for idx, (chunk, emb) in enumerate(zip(chunks, embeddings)):
         emb_literal = "[" + ",".join(str(v) for v in emb) + "]"
@@ -97,14 +100,16 @@ async def ingest_document(
 
 # ── Retrieval (semantic search) ──────────────────────────────────────────────
 
+
 async def retrieve_relevant_chunks(
     db: AsyncSession,
     clinic_id: str,
     query: str,
+    api_key: str,
     top_k: int = 5,
 ) -> list[dict]:
     """Return the top-K most similar chunks for the given query."""
-    query_emb = (await generate_embeddings([query]))[0]
+    query_emb = (await generate_embeddings([query], api_key))[0]
     emb_literal = "[" + ",".join(str(v) for v in query_emb) + "]"
 
     result = await db.execute(
@@ -134,7 +139,8 @@ async def retrieve_relevant_chunks(
 
 # ── LLM answer generation (Gemini) ──────────────────────────────────────────
 
-async def generate_answer(query: str, context_chunks: list[dict]) -> str:
+
+async def generate_answer(query: str, context_chunks: list[dict], api_key: str) -> str:
     """Build a prompt from retrieved chunks and call the Gemini chat model."""
     if not context_chunks:
         return "No relevant documents found. Please upload documents first."
@@ -147,19 +153,26 @@ async def generate_answer(query: str, context_chunks: list[dict]) -> str:
     async with httpx.AsyncClient(timeout=60.0) as client:
         resp = await client.post(
             f"{GEMINI_BASE}/models/{settings.gemini_chat_model}:generateContent",
-            params={"key": settings.gemini_api_key},
+            params={"key": api_key},
             json={
                 "systemInstruction": {
-                    "parts": [{
-                        "text": (
-                            "You are a helpful medical assistant for an intelligent clinic system. "
-                            "Answer the user's question using ONLY the provided document context. "
-                            "If the context does not contain enough information, say so clearly."
-                        ),
-                    }],
+                    "parts": [
+                        {
+                            "text": (
+                                "You are a helpful medical assistant for an intelligent clinic system. "
+                                "Answer the user's question using ONLY the provided document context. "
+                                "If the context does not contain enough information, say so clearly."
+                            ),
+                        }
+                    ],
                 },
                 "contents": [
-                    {"role": "user", "parts": [{"text": f"Context:\n{context}\n\nQuestion: {query}"}]},
+                    {
+                        "role": "user",
+                        "parts": [
+                            {"text": f"Context:\n{context}\n\nQuestion: {query}"}
+                        ],
+                    },
                 ],
             },
         )
@@ -169,6 +182,7 @@ async def generate_answer(query: str, context_chunks: list[dict]) -> str:
 
 
 # ── Chat history ─────────────────────────────────────────────────────────────
+
 
 async def save_chat_message(
     db: AsyncSession,

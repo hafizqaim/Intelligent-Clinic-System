@@ -1,10 +1,12 @@
 """Core configuration."""
+
 from pydantic import field_validator
 from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
     """Application settings from environment variables."""
+
     postgres_user: str
     postgres_password: str
     postgres_db: str
@@ -26,6 +28,7 @@ class Settings(BaseSettings):
     def secret_key_must_be_set(cls, v: str) -> str:
         if v in ("", "CHANGE_ME_TO_A_RANDOM_SECRET", "your_secret_key_here"):
             import warnings
+
             warnings.warn(
                 "SECRET_KEY is using a placeholder value. "
                 "Set a strong random secret in .env for production.",
@@ -38,6 +41,7 @@ class Settings(BaseSettings):
     def gemini_key_should_be_set(cls, v: str) -> str:
         if not v:
             import warnings
+
             warnings.warn(
                 "GEMINI_API_KEY is not set. RAG document upload/query will fail until "
                 "you set it in .env (get a free key at https://aistudio.google.com/apikey).",

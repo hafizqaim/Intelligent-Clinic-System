@@ -81,6 +81,12 @@
 
   .auth-form-side{ display:flex; align-items:center; justify-content:center; padding:var(--sp-6); }
   .auth-card{ width:100%; max-width:380px; display:flex; flex-direction:column; gap:var(--sp-5); }
+  .demo-note{ background:var(--accent-soft); border:1px solid var(--border); border-radius:var(--r-md); padding:var(--sp-3) var(--sp-4); font-size:.8125rem; color:var(--ink-muted); }
+  .demo-note strong{ color:var(--ink); }
+  .demo-accounts{ display:flex; flex-direction:column; gap:.4rem; margin-top:.5rem; }
+  .demo-account{ display:flex; align-items:center; gap:.5rem; background:var(--surface); border:1px solid var(--border); border-radius:var(--r-sm); padding:.4rem .6rem; font-size:.75rem; font-family:var(--font-mono); color:var(--ink); cursor:pointer; text-align:left; }
+  .demo-account:hover{ border-color:var(--accent); }
+  .demo-pass{ margin-left:auto; color:var(--ink-muted); }
   .auth-tabs{ display:flex; gap:var(--sp-1); background:var(--surface-alt); border:1px solid var(--border); border-radius:var(--r-md); padding:3px; }
   .auth-tab{ flex:1; text-align:center; padding:.5rem; border-radius:calc(var(--r-md) - 3px); background:none; border:none; cursor:pointer; color:var(--ink-muted); font-weight:600; font-size:.8125rem; }
   .auth-tab.is-active{ background:var(--surface); color:var(--ink); box-shadow:var(--shadow-sm); }
@@ -252,6 +258,18 @@
 
   <div class="auth-form-side">
     <div class="auth-card">
+      <div class="demo-note">
+        <strong>For testing:</strong> you can log in with either account below.
+        <div class="demo-accounts">
+          <button type="button" class="demo-account" data-demo-email="admin@test.com" data-demo-password="@admin1234">
+            <span class="pill accent">admin</span> admin@test.com <span class="demo-pass">@admin1234</span>
+          </button>
+          <button type="button" class="demo-account" data-demo-email="doc@test.com" data-demo-password="@doc1234">
+            <span class="pill accent">doctor</span> doc@test.com <span class="demo-pass">@doc1234</span>
+          </button>
+        </div>
+      </div>
+
       <div class="auth-tabs">
         <button class="auth-tab is-active" data-auth-tab="login">Log in</button>
         <button class="auth-tab" data-auth-tab="register">Register</button>
@@ -435,6 +453,8 @@
           <div class="card">
             <h2 class="card-title">Session</h2>
             <p class="card-hint">Answers cite the source file(s) they were drawn from, shown under each response.</p>
+            <div class="card-hint" id="gemini-key-status">No Gemini API key set for this session.</div>
+            <button class="btn ghost small block" id="btn-set-gemini-key">Set Gemini API key</button>
             <button class="btn ghost small block" id="refresh-history">Reload history</button>
           </div>
         </div>
@@ -588,6 +608,15 @@
     });
   });
 
+  document.querySelectorAll(".demo-account").forEach(function(btn){
+    btn.addEventListener("click", function(){
+      document.querySelector('.auth-tab[data-auth-tab="login"]').click();
+      var form = document.getElementById("form-login");
+      form.email.value = btn.dataset.demoEmail;
+      form.password.value = btn.dataset.demoPassword;
+    });
+  });
+
   function loginRequest(email, password){
     var body = new URLSearchParams();
     body.set("username", email); body.set("password", password);
@@ -636,7 +665,7 @@
     document.getElementById("shell").classList.remove("nav-open");
     if(name === "dashboard") loadDashboard();
     if(name === "patients") loadPatients();
-    if(name === "rag") loadHistory();
+    if(name === "rag"){ loadHistory(); renderGeminiKeyStatus(); if(!getGeminiKey()) openGeminiKeyModal(); }
     if(name === "clinics") loadClinics();
   }
   document.querySelectorAll("[data-page]").forEach(function(el){
@@ -921,6 +950,62 @@
     });
   });
 
+  /* ══════════════════════ RAG: bring-your-own Gemini key ══════════════════════ */
+  var GEMINI_KEY_STORAGE = "clinic-console-gemini-key";
+  var pendingRagAction = null;
+
+  function getGeminiKey(){
+    try{ return sessionStorage.getItem(GEMINI_KEY_STORAGE) || ""; }catch(e){ return ""; }
+  }
+  function setGeminiKey(key){
+    try{ sessionStorage.setItem(GEMINI_KEY_STORAGE, key); }catch(e){}
+    renderGeminiKeyStatus();
+  }
+  function renderGeminiKeyStatus(){
+    var el = document.getElementById("gemini-key-status");
+    if(!el) return;
+    var key = getGeminiKey();
+    el.textContent = key ? "Key set for this browser session (…" + key.slice(-4) + ")" : "No Gemini API key set for this session.";
+  }
+
+  function openGeminiKeyModal(errorHint){
+    var body =
+      (errorHint ? '<p class="card-hint" style="color:var(--bad)">' + escapeHtml(errorHint) + '</p>' : '') +
+      '<p class="card-hint">Get a free key at <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>. ' +
+      'It\'s kept only in this browser tab for this session — sent with each request, never stored server-side.</p>' +
+      '<form id="modal-gemini-key-form">' +
+      '<div class="field"><label>Gemini API key</label><input type="text" name="gemini_key" required autocomplete="off" spellcheck="false" placeholder="AIza…" style="font-family:var(--font-mono)"></div>' +
+      '<button class="btn block" type="submit">Save key</button>' +
+      '</form>';
+    openModal("Enter your Gemini API key", body, function(panel){
+      panel.querySelector("#modal-gemini-key-form").addEventListener("submit", function(e){
+        e.preventDefault();
+        var f = new FormData(e.target);
+        var key = (f.get("gemini_key") || "").trim();
+        if(!key) return;
+        setGeminiKey(key);
+        closeModal();
+        if(pendingRagAction){
+          var fn = pendingRagAction; pendingRagAction = null;
+          fn(key);
+        }
+      });
+    });
+  }
+  document.getElementById("btn-set-gemini-key").addEventListener("click", function(){ openGeminiKeyModal(); });
+
+  function requireGeminiKey(action){
+    var key = getGeminiKey();
+    if(key){ action(key); return; }
+    pendingRagAction = action;
+    openGeminiKeyModal();
+  }
+
+  function isKeyRelatedError(message){
+    var m = (message || "").toLowerCase();
+    return m.indexOf("gemini") !== -1 && (m.indexOf("key") !== -1 || m.indexOf("quota") !== -1 || m.indexOf("rate limit") !== -1);
+  }
+
   /* ══════════════════════ RAG ══════════════════════ */
   function loadHistory(){
     api("/api/rag/history").then(function(data){
@@ -958,12 +1043,17 @@
       panel.querySelector("#modal-upload-form").addEventListener("submit", function(e){
         e.preventDefault();
         var f = new FormData(e.target);
-        var headers = {};
-        if(token) headers["Authorization"] = "Bearer " + token;
-        fetch("/api/rag/upload", { method:"POST", headers: headers, body: f })
-          .then(function(r){ return r.json().then(function(b){ if(!r.ok) throw new Error(b.detail || "Upload failed"); return b; }); })
-          .then(function(data){ toast(data.message, "success"); closeModal(); })
-          .catch(function(err){ toast(err.message, "error"); });
+        requireGeminiKey(function(geminiKey){
+          var headers = { "X-Gemini-Key": geminiKey };
+          if(token) headers["Authorization"] = "Bearer " + token;
+          fetch("/api/rag/upload", { method:"POST", headers: headers, body: f })
+            .then(function(r){ return r.json().then(function(b){ if(!r.ok) throw new Error(b.detail || "Upload failed"); return b; }); })
+            .then(function(data){ toast(data.message, "success"); closeModal(); })
+            .catch(function(err){
+              toast(err.message, "error");
+              if(isKeyRelatedError(err.message)) openGeminiKeyModal(err.message);
+            });
+        });
       });
     });
   });
@@ -973,11 +1063,20 @@
     var f = new FormData(e.target);
     var q = f.get("query");
     if(!q) return;
-    appendChat("user", q);
-    e.target.reset();
-    api("/api/rag/query", { method:"POST", headers:{"Content-Type":"application/json"}, body: JSON.stringify({ query:q, top_k:5 }) })
-      .then(function(data){ appendChat("assistant", data.answer, data.sources); })
-      .catch(function(err){ appendChat("assistant", "Error: " + err.message); });
+    requireGeminiKey(function(geminiKey){
+      appendChat("user", q);
+      e.target.reset();
+      api("/api/rag/query", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json", "X-Gemini-Key": geminiKey },
+        body: JSON.stringify({ query:q, top_k:5 }),
+      }).then(function(data){
+        appendChat("assistant", data.answer, data.sources);
+      }).catch(function(err){
+        appendChat("assistant", "Error: " + err.message);
+        if(isKeyRelatedError(err.message)) openGeminiKeyModal(err.message);
+      });
+    });
   });
 
   /* ══════════════════════ BOOT ══════════════════════ */

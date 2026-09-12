@@ -6,15 +6,17 @@ from app.database import Base
 from datetime import datetime
 
 
-
-
 class TelemetryReadings(Base):
     __tablename__ = "telemetry_readings"
 
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4)
+    id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), primary_key=True, index=True, default=uuid.uuid4
+    )
     clinic_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
     patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), nullable=False)
-    timestamp: Mapped[datetime] = mapped_column(DateTime, nullable=False, server_default=func.now())
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime, nullable=False, server_default=func.now()
+    )
     heart_rate: Mapped[int] = mapped_column(Integer, nullable=True)
     blood_pressure_systolic: Mapped[int] = mapped_column(Integer, nullable=True)
     blood_pressure_diastolic: Mapped[int] = mapped_column(Integer, nullable=True)

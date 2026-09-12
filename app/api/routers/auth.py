@@ -1,4 +1,5 @@
 """Authentication router."""
+
 from fastapi import APIRouter, HTTPException, Depends
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm
@@ -45,13 +46,16 @@ async def register(user: UserCreate, db: AsyncSession = Depends(_get_db)):
         id=str(new_user.id),
         email=new_user.email,
         full_name=new_user.full_name,
-        role=new_user.role.value if hasattr(new_user.role, 'value') else new_user.role,
+        role=new_user.role.value if hasattr(new_user.role, "value") else new_user.role,
         clinic_id=new_user.clinic_id,
     )
 
 
 @router.post("/login", response_model=Token)
-async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(_get_db)):
+async def login(
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: AsyncSession = Depends(_get_db),
+):
     """Login and get JWT token."""
     result = await db.execute(select(Users).where(Users.email == form_data.username))
     user = result.scalars().first()
@@ -65,7 +69,7 @@ async def login(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSessi
     access_token = create_access_token(
         data={
             "sub": str(user.id),
-            "role": user.role.value if hasattr(user.role, 'value') else user.role,
+            "role": user.role.value if hasattr(user.role, "value") else user.role,
             "clinic_id": str(user.clinic_id),
         },
         expires_delta=timedelta(minutes=settings.access_token_expire_minutes),
@@ -88,6 +92,6 @@ async def get_current_user_info(
         id=str(user.id),
         email=user.email,
         full_name=user.full_name,
-        role=user.role.value if hasattr(user.role, 'value') else user.role,
+        role=user.role.value if hasattr(user.role, "value") else user.role,
         clinic_id=user.clinic_id,
     )

@@ -1,4 +1,5 @@
 """ASGI middleware stack — CORS, request-ID tracing, global error handling."""
+
 import uuid
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
 from starlette.requests import Request
@@ -13,11 +14,14 @@ log = structlog.get_logger(__name__)
 
 # ── Request ID middleware ─────────────────────────────────────────────────────
 
+
 class RequestIDMiddleware(BaseHTTPMiddleware):
     """Inject a unique X-Request-ID header into every request/response and bind
     it to the structlog context so all downstream log lines include it."""
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         request_id = request.headers.get("X-Request-ID", str(uuid.uuid4()))
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
@@ -29,10 +33,13 @@ class RequestIDMiddleware(BaseHTTPMiddleware):
 
 # ── Global exception handler middleware ───────────────────────────────────────
 
+
 class ExceptionMiddleware(BaseHTTPMiddleware):
     """Catch unhandled exceptions and return a consistent 500 JSON body."""
 
-    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> Response:
+    async def dispatch(
+        self, request: Request, call_next: RequestResponseEndpoint
+    ) -> Response:
         try:
             return await call_next(request)
         except Exception:
@@ -44,6 +51,7 @@ class ExceptionMiddleware(BaseHTTPMiddleware):
 
 
 # ── Register all middleware on the app ────────────────────────────────────────
+
 
 def register_middleware(app: FastAPI) -> None:
     """Attach the middleware stack.  Order matters — outermost is added last."""

@@ -4,6 +4,7 @@ Exercises: health check, auth, clinics, patients, telemetry (ingest + anomaly de
 
 Usage:  python smoke_test.py           (server must be running on localhost:8000)
 """
+
 import httpx
 import sys
 import uuid
@@ -16,7 +17,7 @@ FAIL = 0
 
 
 def step(label: str):
-    print(f"\n{'='*60}\n  {label}\n{'='*60}")
+    print(f"\n{'=' * 60}\n  {label}\n{'=' * 60}")
 
 
 def check(name: str, resp: httpx.Response, expected_status: int = 200):
@@ -65,7 +66,7 @@ def main():
     # ── 2. Seed a clinic (direct DB — bootstrap for auth) ──────
     step("2. Seed Clinic (bootstrap)")
     clinic_id = seed_clinic()
-    print(f"  [PASS] Clinic seeded via SQL")
+    print("  [PASS] Clinic seeded via SQL")
     print(f"         clinic_id: {clinic_id}")
     PASS += 1
 
@@ -84,7 +85,9 @@ def main():
 
     # ── 4. Login ─────────────────────────────────────────────────
     step("4. Login")
-    r = c.post("/api/auth/login", data={"username": admin_email, "password": "Admin123!"})
+    r = c.post(
+        "/api/auth/login", data={"username": admin_email, "password": "Admin123!"}
+    )
     check("POST /api/auth/login", r)
     if r.status_code == 200:
         token = r.json()["access_token"]
@@ -113,7 +116,9 @@ def main():
     check("POST /api/auth/register (doctor)", r, 201)
 
     # Login as doctor
-    r = c.post("/api/auth/login", data={"username": doctor_email, "password": "Doctor123!"})
+    r = c.post(
+        "/api/auth/login", data={"username": doctor_email, "password": "Doctor123!"}
+    )
     check("POST /api/auth/login (doctor)", r)
     doctor_token = r.json()["access_token"]
     doctor_headers = {"Authorization": f"Bearer {doctor_token}"}
@@ -174,7 +179,9 @@ def main():
             "oxygen_saturation": 82,
             "temperature": 40.8,
         }
-        r = c.post("/api/telemetry/ingest", json=anomalous_reading, headers=doctor_headers)
+        r = c.post(
+            "/api/telemetry/ingest", json=anomalous_reading, headers=doctor_headers
+        )
         check("POST /api/telemetry/ingest (anomalous)", r, 200)
         if r.status_code == 201:
             data = r.json()
@@ -184,7 +191,11 @@ def main():
 
     # ── 11. Get telemetry readings ───────────────────────────────
     step("11. Query Telemetry Readings")
-    r = c.get("/api/telemetry/readings", params={"patient_id": patient_id}, headers=doctor_headers)
+    r = c.get(
+        "/api/telemetry/readings",
+        params={"patient_id": patient_id},
+        headers=doctor_headers,
+    )
     check("GET /api/telemetry/readings", r)
     if r.status_code == 200:
         readings = r.json()
@@ -192,7 +203,11 @@ def main():
 
     # ── 12. Get anomalies ────────────────────────────────────────
     step("12. Query Anomalies")
-    r = c.get("/api/telemetry/anomalies", params={"patient_id": patient_id}, headers=doctor_headers)
+    r = c.get(
+        "/api/telemetry/anomalies",
+        params={"patient_id": patient_id},
+        headers=doctor_headers,
+    )
     check("GET /api/telemetry/anomalies", r)
     if r.status_code == 200:
         anomalies = r.json()
@@ -204,9 +219,9 @@ def main():
     check("GET /api/clinics/", r)
 
     # ── Summary ──────────────────────────────────────────────────
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  SMOKE TEST COMPLETE: {PASS} passed, {FAIL} failed")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     c.close()
     sys.exit(1 if FAIL else 0)

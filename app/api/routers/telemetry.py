@@ -1,7 +1,8 @@
 """Telemetry router with ML-based anomaly detection."""
-from fastapi import APIRouter, Depends, HTTPException
+
+from fastapi import APIRouter, Depends
 from typing import List
-from sqlalchemy import select, text
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid
 from datetime import datetime
