@@ -34,7 +34,12 @@ async def create_patient(
     )
     db.add(new_patient)
     await db.commit()
-    await db.refresh(new_patient)
+    # Deliberately not calling db.refresh() here: every field, including the
+    # UUID primary key, is a Python-side default already set above, so there's
+    # nothing a reload would add. A refresh is a second round-trip after the
+    # commit and can land on a different pooled connection than the one that
+    # had app.current_tenant set -- on a FORCE ROW LEVEL SECURITY table, that
+    # second connection won't see the row it just inserted.
     return new_patient
 
 
@@ -85,7 +90,7 @@ async def update_patient(
         setattr(patient, field, value)
 
     await db.commit()
-    await db.refresh(patient)
+    # See create_patient: no refresh needed, and none wanted -- see that comment.
     return patient
 
 
